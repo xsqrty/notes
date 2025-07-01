@@ -1,0 +1,423 @@
+basePath: /api/v1
+definitions:
+  dto.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 20
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.NoteRequest:
+    properties:
+      name:
+        maxLength: 200
+        minLength: 5
+        type: string
+      text:
+        maxLength: 2000
+        minLength: 5
+        type: string
+    required:
+    - name
+    - text
+    type: object
+  dto.NoteResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      text:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  dto.NoteSearchResponse:
+    properties:
+      rows:
+        items:
+          $ref: '#/definitions/dto.NoteResponse'
+        type: array
+      total_rows:
+        type: integer
+    type: object
+  dto.SignUpRequest:
+    properties:
+      email:
+        type: string
+      name:
+        minLength: 2
+        type: string
+      password:
+        maxLength: 20
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  dto.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  errx.CodeError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+      options:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
+  httpio.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/errx.CodeError'
+    type: object
+  search.Filters:
+    additionalProperties: {}
+    type: object
+  search.Order:
+    properties:
+      desc:
+        type: boolean
+      key:
+        type: string
+    type: object
+  search.Request:
+    properties:
+      filters:
+        $ref: '#/definitions/search.Filters'
+      limit:
+        minimum: 0
+        type: integer
+      offset:
+        minimum: 0
+        type: integer
+      orders:
+        items:
+          $ref: '#/definitions/search.Order'
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: tbq.active@gmail.com
+    name: XSQRTY
+    url: https://github.com/xsqrty/
+  description: This is a sample note service
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Note API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login user with email&password
+      parameters:
+      - description: Login request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      description: Create new tokens based on refresh token
+      parameters:
+      - description: Bearer {YOUR REFRESH TOKEN}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      summary: Refresh token
+      tags:
+      - Auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user
+      parameters:
+      - description: Sign up request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      summary: Sign up
+      tags:
+      - Auth
+  /notes:
+    post:
+      consumes:
+      - application/json
+      description: Create new note
+      parameters:
+      - description: Create note request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.NoteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.NoteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      security:
+      - AccessTokenAuth: []
+      summary: Create note
+      tags:
+      - Notes
+  /notes/{id}:
+    delete:
+      description: Delete note by id
+      parameters:
+      - description: Note id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.NoteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      security:
+      - AccessTokenAuth: []
+      summary: Delete note
+      tags:
+      - Notes
+    get:
+      description: Get note by id
+      parameters:
+      - description: Note id
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.NoteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      security:
+      - AccessTokenAuth: []
+      summary: Get note
+      tags:
+      - Notes
+    put:
+      consumes:
+      - application/json
+      description: Create new note
+      parameters:
+      - description: Note id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Create note request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.NoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.NoteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      security:
+      - AccessTokenAuth: []
+      summary: Create note
+      tags:
+      - Notes
+  /notes/search:
+    post:
+      consumes:
+      - application/json
+      description: Search notes (filtering, ordering, limit, offset)
+      parameters:
+      - description: Search request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/search.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.NoteSearchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpio.ErrorResponse'
+      security:
+      - AccessTokenAuth: []
+      summary: Search notes
+      tags:
+      - Notes
+securityDefinitions:
+  AccessTokenAuth:
+    description: Type "Bearer {YOUR TOKEN}" to correctly set the API Key
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

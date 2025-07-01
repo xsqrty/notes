@@ -1,0 +1,23 @@
+all: false
+force-file-write: true
+formatter: goimports
+log-level: info
+template: testify
+packages:
+  github.com/xsqrty/notes/internal/domain:
+    config:
+      all: true
+      recursive: true
+      dir: 'mocks/domain/mock_{{.SrcPackageName}}'
+      filename: 'mock_{{.SrcPackageName}}.go'
+      structname: '{{.InterfaceName}}'
+      pkgname: 'mock_{{.SrcPackageName}}'
+  github.com/xsqrty/notes/internal/middleware:
+    config:
+      all: true
+      recursive: false
+      dir: 'mocks/middleware/mock_{{.SrcPackageName}}'
+      filename: 'mock_{{.SrcPackageName}}.go'
+      structname: '{{.InterfaceName}}'
+      pkgname: 'mock_{{.SrcPackageName}}'
+

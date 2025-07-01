@@ -1,0 +1,49 @@
+services:
+  notes:
+    image: "registry.xsqrty.tech/notes:latest"
+    container_name: notes
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+      - "1323:1323"
+    environment:
+      MODE: prod
+      DSN: postgres://postgres:postgres@db:5432/notes
+      LOG_STDOUT_FORMATTER: json
+  migrate:
+    image: "migrate/migrate:4"
+    container_name: "notes-migrate"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: no
+    entrypoint: [
+      "migrate",
+      "-path", "/migrations",
+      "-database", "postgres://postgres:postgres@db:5432/notes?sslmode=disable",
+      "up"
+    ]
+    volumes:
+      - ./migrations:/migrations
+  db:
+    image: "postgres:17.5-alpine"
+    container_name: notes-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notes
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      retries: 3
+      timeout: 1s
+
+volumes:
+  db:

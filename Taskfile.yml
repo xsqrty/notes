@@ -1,0 +1,77 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  APP_NAME: notes
+  PACKAGE: github.com/xsqrty/notes
+  BIN_DIR: bin
+  ENTRY: cmd/notes.go
+  REST_ENTRY: internal/api/rest/rest.go
+  DEPS_DIR: "{{.USER_WORKING_DIR}}/{{.BIN_DIR}}/deps"
+  MIGRATIONS_DIR: "{{.USER_WORKING_DIR}}/migrations"
+  MIGRATE_BIN: "{{.DEPS_DIR}}/migrate"
+  SWAG_BIN: "{{.DEPS_DIR}}/swag"
+  MOCKERY_BIN: "{{.DEPS_DIR}}/mockery"
+  APP_BIN: "{{if eq .OS \"windows\"}}{{.BIN_DIR}}/{{.APP_NAME}}.exe{{else}}{{.BIN_DIR}}/{{.APP_NAME}}{{end}}"
+  DSN: $DSN
+
+tasks:
+  test:
+    silent: true
+    cmds:
+      - go clean -cache
+      - go test -v -timeout 10m -race -covermode atomic -coverprofile=coverage.out -coverpkg=github.com/xsqrty/notes/... ./...
+      - echo Total coverage $(go tool cover -func=coverage.out | tail -n 1 | awk '{print $3}')
+  mock:generate:
+    silent: true
+    cmds:
+      - "{{.MOCKERY_BIN}}"
+  swag:fmt:
+    silent: true
+    cmds:
+      - "{{.SWAG_BIN}} fmt"
+  swag:generate:
+    silent: true
+    cmds:
+      - "{{.SWAG_BIN}} init -g {{.REST_ENTRY}}"
+  migrate:up:
+    silent: true
+    cmds:
+      - "{{.MIGRATE_BIN}} -path {{.MIGRATIONS_DIR}} -database {{.DSN}} up"
+  migrate:down:
+    silent: true
+    cmds:
+      - "{{.MIGRATE_BIN}} -path {{.MIGRATIONS_DIR}} -database {{.DSN}} down 1"
+  migrate:version:
+    silent: true
+    cmds:
+      - "{{.MIGRATE_BIN}} -path {{.MIGRATIONS_DIR}} -database {{.DSN}} version"
+  migrate:create:*:
+    vars:
+      NAME: "{{index .MATCH 0}}"
+    silent: true
+    cmds:
+      - echo "Create migration {{ .NAME }} in {{.MIGRATIONS_DIR}}"
+      - "{{.MIGRATE_BIN}} create -dir {{.MIGRATIONS_DIR}} -ext sql {{.NAME}}"
+  install:
+    silent: true
+    cmds:
+      - GOBIN={{.DEPS_DIR}} go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.3
+      - GOBIN={{.DEPS_DIR}} go install github.com/swaggo/swag/cmd/swag@v1.16.4
+      - GOBIN={{.DEPS_DIR}} go install github.com/vektra/mockery/v3@v3.4.0
+  build:dev:
+    silent: true
+    cmds:
+      - task build:0.0.0-dev
+  build:*:
+    vars:
+      VERSION: "{{index .MATCH 0}}"
+    silent: true
+    cmds:
+      - echo "Build {{.APP_NAME}}@{{.VERSION}}"
+      - go build -o {{.APP_BIN}} -ldflags "-X '{{.PACKAGE}}/internal/config.Version={{.VERSION}}' -X '{{.PACKAGE}}/internal/config.AppName={{.APP_NAME}}'" {{.ENTRY}}
+  run:
+    silent: true
+    cmds:
+      - go run {{.ENTRY}}

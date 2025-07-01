@@ -1,8 +1,8 @@
-ARG VERSION="unknown"
-ARG APP_NAME="app"
-ARG PACKAGE="github.com/xsqrty/notes"
-
 FROM golang:1.24.4-alpine AS builder
+
+ARG PACKAGE="github.com/xsqrty/notes"
+ARG VERSION="unknown"
+ARG APP_NAME="notes"
 
 WORKDIR /app
 
@@ -11,8 +11,6 @@ RUN go mod download
 
 COPY . .
 RUN go build -v -o ./bin/notes -ldflags "-X '${PACKAGE}/internal/config.Version=${VERSION}' -X '${PACKAGE}/internal/config.AppName=${APP_NAME}'" ./cmd/notes.go
-
-CMD ["notes"]
 
 FROM scratch
 COPY --from=builder /app/bin/notes .

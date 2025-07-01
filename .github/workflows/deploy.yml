@@ -34,6 +34,11 @@ jobs:
     runs-on: ubuntu-22.04
     environment: production
     steps:
+      - name: Extract version (trim prefix "v")
+        id: image_version
+        run: |
+          VER="${{ env.APP_VERSION }}"
+          echo "version=${VER#v}" >> $GITHUB_OUTPUT
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -51,7 +56,7 @@ jobs:
           push: true
           tags: |
             ${{ vars.REGISTRY }}/${{ env.APP_NAME }}:latest
-            ${{ vars.REGISTRY }}/${{ env.APP_NAME }}:${{ env.APP_VERSION }}
+            ${{ vars.REGISTRY }}/${{ env.APP_NAME }}:${{ steps.image_version.outputs.version }}
           build-args: |
             VERSION=${{ env.APP_VERSION }}
             APP_NAME=${{ env.APP_NAME }}

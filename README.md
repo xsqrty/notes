@@ -1,3 +1,7 @@
+# Simple notes app (template)
+
+[![Deploy Status](https://github.com/xsqrty/notes/actions/workflows/deploy.yml/badge.svg)](https://github.com/xsqrty/notes/actions/workflows/deploy.yml)
+
 ## Install dependencies
 
 * Install task [task manager](https://taskfile.dev/installation/)
@@ -85,6 +89,7 @@ go run cmd/notes.go
 ```
 
 *run tests*
+
 ```shell
 task test
 ```

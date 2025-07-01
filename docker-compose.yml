@@ -14,6 +14,7 @@ services:
       MODE: prod
       DSN: postgres://postgres:postgres@db:5432/notes
       LOG_STDOUT_FORMATTER: json
+      CORS_ALLOWED_ORIGINS: https://xsqrty.tech
   migrate:
     image: "migrate/migrate:4"
     container_name: "notes-migrate"

@@ -162,6 +162,26 @@ const docTemplate = `{
                 }
             }
         },
+        "/healthcheck": {
+            "get": {
+                "description": "Get application version, name, current time",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Healthcheck"
+                ],
+                "summary": "Healthcheck",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.HealthCheckResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/notes": {
             "post": {
                 "security": [
@@ -454,6 +474,20 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "app_name": {
+                    "type": "string"
+                },
+                "current_time": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.LoginRequest": {
             "type": "object",
             "required": [

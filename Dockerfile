@@ -1,3 +1,6 @@
+ARG VERSION="unknown"
+ARG APP_NAME="app"
+
 FROM golang:1.24.4-alpine AS builder
 
 WORKDIR /app
@@ -6,7 +9,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -v -o ./bin/notes -ldflags "-X '{{.PACKAGE}}/internal/config.Version=$Version' -X '{{.PACKAGE}}/internal/config.AppName=$AppName'" ./cmd/notes.go
+RUN go build -v -o ./bin/notes -ldflags "-X '{{.PACKAGE}}/internal/config.Version=${VERSION}' -X '{{.PACKAGE}}/internal/config.AppName=${APP_NAME}'" ./cmd/notes.go
 
 CMD ["notes"]
 

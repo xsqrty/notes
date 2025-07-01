@@ -20,6 +20,8 @@ type Config struct {
 	Cors    CorsConfig
 	Swag    SwagConfig
 	Metrics MetricsConfig
+	Version string
+	AppName string
 }
 
 type MetricsConfig struct {
@@ -109,6 +111,9 @@ func NewConfig() (*Config, error) {
 		}
 	}
 
+	config.Version = Version
+	config.AppName = AppName
+
 	return &config, nil
 }
 
@@ -118,14 +123,6 @@ func (_ *Config) PrintVersion() bool {
 
 func (_ *Config) PrintHelp() bool {
 	return args.printHelp
-}
-
-func (_ *Config) Version() string {
-	return Version
-}
-
-func (_ *Config) AppName() string {
-	return AppName
 }
 
 func (c *Config) Help() string {

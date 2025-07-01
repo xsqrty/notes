@@ -47,6 +47,7 @@ func NewRest(deps *app.Deps) Rest {
 func (r *rest) Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Mount("/auth", handler.NewAuthHandler(r.deps).Routes())
+	router.Mount("/healthcheck", handler.NewHealthCheckHandler(r.deps).Routes())
 	router.With(r.deps.JWTAuthentication.Verify).Mount("/notes", handler.NewNoteHandler(r.deps).Routes())
 
 	entrypoint := chi.NewRouter()

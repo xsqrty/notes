@@ -1,5 +1,14 @@
 basePath: /api/v1
 definitions:
+  dto.HealthCheckResponse:
+    properties:
+      app_name:
+        type: string
+      current_time:
+        type: integer
+      version:
+        type: string
+    type: object
   dto.LoginRequest:
     properties:
       email:
@@ -229,6 +238,19 @@ paths:
       summary: Sign up
       tags:
       - Auth
+  /healthcheck:
+    get:
+      description: Get application version, name, current time
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HealthCheckResponse'
+      summary: Healthcheck
+      tags:
+      - Healthcheck
   /notes:
     post:
       consumes:

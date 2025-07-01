@@ -27,7 +27,7 @@ func main() {
 	}
 
 	if cfg.PrintVersion() {
-		fmt.Printf("%s version %s\n", cfg.AppName(), cfg.Version())
+		fmt.Printf("%s version %s\n", cfg.AppName, cfg.Version)
 		os.Exit(0)
 	}
 

@@ -83,3 +83,18 @@ jobs:
             docker login ${{ vars.REGISTRY }} -u ${{ vars.REGISTRY_USER }} -p ${{ secrets.REGISTRY_PASS }}
             docker pull ${{ vars.REGISTRY }}/${{ env.APP_NAME }}:latest
             docker compose -f /home/${{ vars.SERVER_USER }}/${{ env.APP_NAME }}/docker-compose.yml up -d
+
+  healthcheck:
+    needs: deploy
+    name: Healthcheck
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check version
+        run: |
+          version=$(curl -s ${{ vars.HEALTHCHECK_ENDPOINT }} | jq -r '.version')
+          if [ "$version" != "${{ github.ref_name }}" ]; then
+            echo "Expected version ${{ github.ref_name }}, got $version"
+            exit 1
+          else
+            echo "Success: $version"
+          fi

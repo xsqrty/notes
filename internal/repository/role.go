@@ -32,7 +32,7 @@ func (rr *roleRepo) AttachUserRolesByLabel(ctx context.Context, label role.Label
 	}
 
 	for _, r := range roles {
-		count, err := orm.Count(rolesUsersTableName).Where(op.And{op.Eq("role_id", r.ID), op.Eq("user_id", u.ID)}).With(ctx, rr.qe)
+		count, err := orm.Count(op.Select().From(rolesUsersTableName).Where(op.And{op.Eq("role_id", r.ID), op.Eq("user_id", u.ID)})).With(ctx, rr.qe)
 		if err != nil {
 			return fmt.Errorf("attach roles with label for user (count roles) %w (label %s, user %s, role %s)", err, label, u.ID, r.ID)
 		}
@@ -62,12 +62,14 @@ func (rr *roleRepo) AttachUserRolesByLabel(ctx context.Context, label role.Label
 }
 
 func (rr *roleRepo) HasPermissions(ctx context.Context, permissions []role.Permission, u *user.User) (bool, error) {
-	count, err := orm.Count(rolesUsersTableName).
-		Join(rolesTableName, op.Eq("role_id", op.Column("roles.id"))).
-		Where(op.And{
-			op.Eq("user_id", u.ID),
-			op.Lc("permissions", permissions),
-		}).With(ctx, rr.qe)
+	count, err := orm.Count(
+		op.Select().From(rolesUsersTableName).
+			Join(rolesTableName, op.Eq("role_id", op.Column("roles.id"))).
+			Where(op.And{
+				op.Eq("user_id", u.ID),
+				op.Lc("permissions", permissions),
+			}),
+	).With(ctx, rr.qe)
 	if err != nil {
 		return false, fmt.Errorf("check roles permissions %w (user %s, permissions %v)", err, u.ID, permissions)
 	}

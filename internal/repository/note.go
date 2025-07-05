@@ -66,7 +66,7 @@ func (r *noteRepo) Delete(ctx context.Context, n *note.Note) error {
 }
 
 func (r *noteRepo) IDExists(ctx context.Context, id uuid.UUID) (bool, error) {
-	count, err := orm.Count(notesTableName).Where(op.Eq("id", id)).With(ctx, r.qe)
+	count, err := orm.Count(op.Select().From(notesTableName).Where(op.Eq("id", id))).With(ctx, r.qe)
 	if err != nil {
 		return false, fmt.Errorf("check note id: %w", err)
 	}

@@ -339,6 +339,9 @@ func TestIntegrationNote_Search(t *testing.T) {
 			name:  "successful_search_all",
 			token: token,
 			req: &search.Request{
+				Orders: []search.Order{
+					{Key: "id", Desc: false},
+				},
 				Limit: uint64(len(notes)),
 			},
 			statusCode: http.StatusOK,
@@ -351,6 +354,9 @@ func TestIntegrationNote_Search(t *testing.T) {
 			name:  "successful_search_limited",
 			token: token,
 			req: &search.Request{
+				Orders: []search.Order{
+					{Key: "id", Desc: false},
+				},
 				Limit: uint64(len(limitedNotes)),
 			},
 			statusCode: http.StatusOK,
@@ -363,6 +369,9 @@ func TestIntegrationNote_Search(t *testing.T) {
 			name:  "successful_search_filtered",
 			token: token,
 			req: &search.Request{
+				Orders: []search.Order{
+					{Key: "id", Desc: false},
+				},
 				Limit: uint64(len(notes)),
 				Filters: map[string]any{
 					"$or": []map[string]any{
@@ -385,6 +394,9 @@ func TestIntegrationNote_Search(t *testing.T) {
 			name:  "successful_search_filtered_offset",
 			token: token,
 			req: &search.Request{
+				Orders: []search.Order{
+					{Key: "id", Desc: false},
+				},
 				Limit:  1,
 				Offset: 1,
 				Filters: map[string]any{

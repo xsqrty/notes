@@ -39,7 +39,7 @@ func (r *userRepo) Save(ctx context.Context, u *user.User) error {
 }
 
 func (r *userRepo) EmailExists(ctx context.Context, email string) (bool, error) {
-	count, err := orm.Count(usersTableName).By("id").Where(op.Eq("email", email)).With(ctx, r.qe)
+	count, err := orm.Count(op.Select().From(usersTableName).Where(op.Eq("email", email))).By("id").With(ctx, r.qe)
 	if err != nil {
 		return false, fmt.Errorf("check user email error: %w", err)
 	}

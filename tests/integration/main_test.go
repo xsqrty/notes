@@ -127,6 +127,10 @@ func startPostgresContainer(ctx context.Context) (string, func(), error) {
 	}
 
 	port, err := container.MappedPort(ctx, "5432")
+	if err != nil {
+		return "", nil, err
+	}
+
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", postgresUser, postgresPass, host, port.Port(), postgresDB)
 	return dsn, func() {
 		container.Terminate(ctx)

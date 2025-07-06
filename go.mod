@@ -18,7 +18,7 @@ require (
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.4
 	github.com/testcontainers/testcontainers-go v0.37.0
-	github.com/xsqrty/op v0.3.5
+	github.com/xsqrty/op v0.3.6
 	golang.org/x/crypto v0.39.0
 )
 

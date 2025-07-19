@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
@@ -13,7 +15,6 @@ import (
 	"github.com/xsqrty/notes/internal/domain/user"
 	"github.com/xsqrty/notes/mocks/domain/mock_note"
 	"github.com/xsqrty/notes/pkg/rbac"
-	"testing"
 )
 
 func TestNoteService_Create(t *testing.T) {
@@ -70,7 +71,10 @@ func TestNoteService_Create(t *testing.T) {
 			expected:    nil,
 			expectedErr: fmt.Sprintf("create note: check granted: granted err (user %s)", u.ID),
 			mocker: func(repo *mock_note.Repository, guard *mock_note.Guarder) {
-				guard.EXPECT().IsGranted(mock.Anything, rbac.CREATE, (*note.Note)(nil), u).Return(false, errors.New("granted err")).Once()
+				guard.EXPECT().
+					IsGranted(mock.Anything, rbac.CREATE, (*note.Note)(nil), u).
+					Return(false, errors.New("granted err")).
+					Once()
 			},
 		},
 	}
@@ -168,7 +172,10 @@ func TestNoteService_Get(t *testing.T) {
 			expectedErr: fmt.Sprintf("get note: check granted: granted error (user %s, note %s)", u.ID, id),
 			mocker: func(repo *mock_note.Repository, guard *mock_note.Guarder) {
 				repo.EXPECT().GetByID(mock.Anything, id).Return(n, nil).Once()
-				guard.EXPECT().IsGranted(mock.Anything, rbac.READ, n, u).Return(false, errors.New("granted error")).Once()
+				guard.EXPECT().
+					IsGranted(mock.Anything, rbac.READ, n, u).
+					Return(false, errors.New("granted error")).
+					Once()
 			},
 		},
 	}
@@ -258,7 +265,10 @@ func TestNoteService_Update(t *testing.T) {
 			mocker: func(repo *mock_note.Repository, guard *mock_note.Guarder) {
 				n := createNote()
 				repo.EXPECT().GetByID(mock.Anything, id).Return(n, nil).Once()
-				guard.EXPECT().IsGranted(mock.Anything, rbac.UPDATE, n, u).Return(false, errors.New("granted error")).Once()
+				guard.EXPECT().
+					IsGranted(mock.Anything, rbac.UPDATE, n, u).
+					Return(false, errors.New("granted error")).
+					Once()
 			},
 		},
 		{
@@ -380,7 +390,10 @@ func TestNoteService_Delete(t *testing.T) {
 			expectedErr: fmt.Sprintf("delete note: check granted: granted error (user %s, note %s)", u.ID, id),
 			mocker: func(repo *mock_note.Repository, guard *mock_note.Guarder) {
 				repo.EXPECT().GetByID(mock.Anything, id).Return(n, nil).Once()
-				guard.EXPECT().IsGranted(mock.Anything, rbac.DELETE, n, u).Return(false, errors.New("granted error")).Once()
+				guard.EXPECT().
+					IsGranted(mock.Anything, rbac.DELETE, n, u).
+					Return(false, errors.New("granted error")).
+					Once()
 			},
 		},
 	}
@@ -470,7 +483,10 @@ func TestNoteService_Search(t *testing.T) {
 			req:         req,
 			expectedErr: fmt.Sprintf("search note: check granted: granted error (user %s)", u.ID),
 			mocker: func(repo *mock_note.Repository, guard *mock_note.Guarder) {
-				guard.EXPECT().IsGranted(mock.Anything, rbac.READ, (*note.Note)(nil), u).Return(false, errors.New("granted error")).Once()
+				guard.EXPECT().
+					IsGranted(mock.Anything, rbac.READ, (*note.Note)(nil), u).
+					Return(false, errors.New("granted error")).
+					Once()
 			},
 		},
 	}

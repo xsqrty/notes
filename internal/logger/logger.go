@@ -3,30 +3,27 @@ package logger
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"
 	"github.com/xsqrty/notes/internal/config"
 	"github.com/xsqrty/notes/pkg/config/formatter"
 	"github.com/xsqrty/notes/pkg/logger/daily"
-	"io"
-	"os"
-	"strings"
-	"time"
 )
 
+// Logger is a wrapper around zerolog.Logger that adds support for daily file-based logging and lifecycle management.
 type Logger struct {
 	zerolog.Logger
 	daily daily.Daily
 }
 
-func (l *Logger) Close() error {
-	if l.daily == nil {
-		return nil
-	}
-
-	return l.daily.Close()
-}
-
+// NewLogger initializes and returns a new Logger instance based on the provided LoggerConfig settings.
+// It supports multiple output targets like stdout and file-based logging with options for JSON or Pretty formatting.
+// Returns an error if configuration is invalid or logging setup fails.
 func NewLogger(loggerConfig config.LoggerConfig) (*Logger, error) {
 	var log Logger
 	zerolog.TimeFieldFormat = "2006-01-02 15:04:05.000"
@@ -72,9 +69,21 @@ func NewLogger(loggerConfig config.LoggerConfig) (*Logger, error) {
 		})
 
 		log.daily.OnGC(func(duration time.Duration, files []string) {
-			log.Info().Str("completed_at", duration.String()).Strs("files", files).Msg(fmt.Sprintf("GC completed, %d files deleted", len(files)))
+			log.Info().
+				Str("completed_at", duration.String()).
+				Strs("files", files).
+				Msg(fmt.Sprintf("GC completed, %d files deleted", len(files)))
 		})
 	}
 
 	return &log, nil
+}
+
+// Close releases resources associated with the Logger, including closing any underlying daily file if applicable.
+func (l *Logger) Close() error {
+	if l.daily == nil {
+		return nil
+	}
+
+	return l.daily.Close()
 }

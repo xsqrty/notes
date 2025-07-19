@@ -6,6 +6,7 @@ import (
 	"github.com/xsqrty/notes/internal/dto"
 )
 
+// LoginRequestDtoToEntity converts a LoginRequest DTO to an auth.Login entity.
 func LoginRequestDtoToEntity(request *dto.LoginRequest) *auth.Login {
 	return &auth.Login{
 		Email:    request.Email,
@@ -13,6 +14,7 @@ func LoginRequestDtoToEntity(request *dto.LoginRequest) *auth.Login {
 	}
 }
 
+// SignUpRequestDtoToEntity converts a SignUpRequest DTO to an auth.SignUp entity.
 func SignUpRequestDtoToEntity(request *dto.SignUpRequest) *auth.SignUp {
 	return &auth.SignUp{
 		Email:    request.Email,
@@ -21,6 +23,7 @@ func SignUpRequestDtoToEntity(request *dto.SignUpRequest) *auth.SignUp {
 	}
 }
 
+// TokensToResponseDto converts auth.Tokens to a dto.TokenResponse by mapping fields and calling UserToResponseDto.
 func TokensToResponseDto(tokens *auth.Tokens) *dto.TokenResponse {
 	return &dto.TokenResponse{
 		AccessToken:  tokens.AccessToken,
@@ -29,6 +32,7 @@ func TokensToResponseDto(tokens *auth.Tokens) *dto.TokenResponse {
 	}
 }
 
+// UserToResponseDto converts a user.User struct to a dto.UserResponse struct for external API responses.
 func UserToResponseDto(user *user.User) *dto.UserResponse {
 	return &dto.UserResponse{
 		ID:    user.ID,

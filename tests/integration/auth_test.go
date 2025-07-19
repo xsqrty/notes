@@ -3,26 +3,28 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"testing"
+
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/require"
 	"github.com/xsqrty/notes/internal/dto"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
 	"github.com/xsqrty/notes/pkg/httputil/httpio/errx"
-	"net/http"
-	"testing"
+	"github.com/xsqrty/notes/tests/testutil"
 )
 
 func TestIntegrationAuth_Login(t *testing.T) {
 	t.Parallel()
-	cases := []integrationCase[dto.LoginRequest, dto.TokenResponse]{
+	cases := []testutil.IntegrationCase[dto.LoginRequest, dto.TokenResponse]{
 		{
-			name: "successful_login",
-			req: &dto.LoginRequest{
+			Name: "successful_login",
+			Req: &dto.LoginRequest{
 				Email:    rootEmail,
 				Password: rootPassword,
 			},
-			statusCode: http.StatusCreated,
-			expected: &dto.TokenResponse{
+			StatusCode: http.StatusCreated,
+			Expected: &dto.TokenResponse{
 				User: &dto.UserResponse{
 					Name:  rootName,
 					Email: rootEmail,
@@ -30,26 +32,26 @@ func TestIntegrationAuth_Login(t *testing.T) {
 			},
 		},
 		{
-			name: "user_not_found",
-			req: &dto.LoginRequest{
+			Name: "user_not_found",
+			Req: &dto.LoginRequest{
 				Email:    gofakeit.Email(),
 				Password: rootPassword,
 			},
-			statusCode: http.StatusUnauthorized,
-			expectedErr: &httpio.ErrorResponse{
+			StatusCode: http.StatusUnauthorized,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeUnauthorized,
 				},
 			},
 		},
 		{
-			name: "validation_error",
-			req: &dto.LoginRequest{
+			Name: "validation_error",
+			Req: &dto.LoginRequest{
 				Email:    gofakeit.Name(),
 				Password: rootPassword,
 			},
-			statusCode: http.StatusBadRequest,
-			expectedErr: &httpio.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeValidation,
 				},
@@ -58,9 +60,9 @@ func TestIntegrationAuth_Login(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			tc.run(t, http.MethodPost, "/api/v1/auth/login", func(expected, actual *dto.TokenResponse) {
+			tc.Run(t, http.MethodPost, "/api/v1/auth/login", func(expected, actual *dto.TokenResponse) {
 				require.NotEmpty(t, actual.AccessToken)
 				require.NotEmpty(t, actual.RefreshToken)
 				require.Equal(t, expected.User.Name, actual.User.Name)
@@ -77,22 +79,22 @@ func TestIntegrationAuth_SignUp(t *testing.T) {
 	name := gofakeit.Name()
 	password := gofakeit.Password(true, true, true, true, true, 10)
 
-	cases := []integrationCase[dto.SignUpRequest, dto.TokenResponse]{
+	cases := []testutil.IntegrationCase[dto.SignUpRequest, dto.TokenResponse]{
 		{
-			name: "successful_signup",
-			req: &dto.SignUpRequest{
+			Name: "successful_signup",
+			Req: &dto.SignUpRequest{
 				Name:     name,
 				Email:    email,
 				Password: password,
 			},
-			statusCode: http.StatusCreated,
-			expected: &dto.TokenResponse{
+			StatusCode: http.StatusCreated,
+			Expected: &dto.TokenResponse{
 				User: &dto.UserResponse{
 					Name:  name,
 					Email: email,
 				},
 			},
-			onSuccess: func() {
+			OnSuccess: func() {
 				require.NotEmpty(t, login(t, &dto.LoginRequest{
 					Email:    email,
 					Password: password,
@@ -100,27 +102,27 @@ func TestIntegrationAuth_SignUp(t *testing.T) {
 			},
 		},
 		{
-			name: "email_already_exists",
-			req: &dto.SignUpRequest{
+			Name: "email_already_exists",
+			Req: &dto.SignUpRequest{
 				Name:     gofakeit.Name(),
 				Email:    rootEmail,
 				Password: rootPassword,
 			},
-			statusCode: http.StatusBadRequest,
-			expectedErr: &httpio.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeEmailExists,
 				},
 			},
 		},
 		{
-			name: "validation_error",
-			req: &dto.SignUpRequest{
+			Name: "validation_error",
+			Req: &dto.SignUpRequest{
 				Email:    gofakeit.Name(),
 				Password: rootPassword,
 			},
-			statusCode: http.StatusBadRequest,
-			expectedErr: &httpio.ErrorResponse{
+			StatusCode: http.StatusBadRequest,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeValidation,
 				},
@@ -129,9 +131,9 @@ func TestIntegrationAuth_SignUp(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			tc.run(t, http.MethodPost, "/api/v1/auth/signup", func(expected, actual *dto.TokenResponse) {
+			tc.Run(t, http.MethodPost, "/api/v1/auth/signup", func(expected, actual *dto.TokenResponse) {
 				require.NotEmpty(t, actual.AccessToken)
 				require.NotEmpty(t, actual.RefreshToken)
 				require.Equal(t, expected.User.Name, actual.User.Name)
@@ -144,12 +146,12 @@ func TestIntegrationAuth_SignUp(t *testing.T) {
 func TestIntegrationAuth_RefreshToken(t *testing.T) {
 	t.Parallel()
 
-	cases := []integrationCase[any, dto.TokenResponse]{
+	cases := []testutil.IntegrationCase[any, dto.TokenResponse]{
 		{
-			name:       "successful_refresh",
-			token:      rootTokens.RefreshToken,
-			statusCode: http.StatusCreated,
-			expected: &dto.TokenResponse{
+			Name:       "successful_refresh",
+			Token:      rootTokens.RefreshToken,
+			StatusCode: http.StatusCreated,
+			Expected: &dto.TokenResponse{
 				User: &dto.UserResponse{
 					Name:  rootName,
 					Email: rootEmail,
@@ -157,20 +159,20 @@ func TestIntegrationAuth_RefreshToken(t *testing.T) {
 			},
 		},
 		{
-			name:       "incorrect_token",
-			token:      rootTokens.AccessToken,
-			statusCode: http.StatusUnauthorized,
-			expectedErr: &httpio.ErrorResponse{
+			Name:       "incorrect_token",
+			Token:      rootTokens.AccessToken,
+			StatusCode: http.StatusUnauthorized,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeUnauthorized,
 				},
 			},
 		},
 		{
-			name:       "bad_request",
-			token:      "",
-			statusCode: http.StatusUnauthorized,
-			expectedErr: &httpio.ErrorResponse{
+			Name:       "bad_request",
+			Token:      "",
+			StatusCode: http.StatusUnauthorized,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeUnauthorized,
 				},
@@ -179,9 +181,9 @@ func TestIntegrationAuth_RefreshToken(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			tc.run(t, http.MethodPost, "/api/v1/auth/refresh", func(expected, actual *dto.TokenResponse) {
+			tc.Run(t, http.MethodPost, "/api/v1/auth/refresh", func(expected, actual *dto.TokenResponse) {
 				require.NotEmpty(t, actual.AccessToken)
 				require.NotEmpty(t, actual.RefreshToken)
 				require.Equal(t, expected.User.Name, actual.User.Name)
@@ -196,14 +198,14 @@ func login(t *testing.T, req *dto.LoginRequest) *dto.TokenResponse {
 	jsonReq, err := json.Marshal(req)
 	require.NoError(t, err)
 
-	res, err := http.Post(withBaseUrl("/api/v1/auth/login"), "application/json", bytes.NewReader(jsonReq))
+	res, err := http.Post(testutil.WithBaseUrl("/api/v1/auth/login"), "application/json", bytes.NewReader(jsonReq))
 	require.NoError(t, err)
-	defer res.Body.Close()
+	defer res.Body.Close() // nolint: errcheck
 
 	require.Equal(t, http.StatusCreated, res.StatusCode)
 
 	tokens := &dto.TokenResponse{}
-	json.NewDecoder(res.Body).Decode(tokens)
+	require.NoError(t, json.NewDecoder(res.Body).Decode(tokens))
 	require.Equal(t, req.Email, tokens.User.Email)
 
 	return tokens
@@ -214,14 +216,14 @@ func signUp(t *testing.T, req *dto.SignUpRequest) *dto.TokenResponse {
 	jsonReq, err := json.Marshal(req)
 	require.NoError(t, err)
 
-	res, err := http.Post(withBaseUrl("/api/v1/auth/signup"), "application/json", bytes.NewReader(jsonReq))
+	res, err := http.Post(testutil.WithBaseUrl("/api/v1/auth/signup"), "application/json", bytes.NewReader(jsonReq))
 	require.NoError(t, err)
-	defer res.Body.Close()
+	defer res.Body.Close() // nolint: errcheck
 
 	require.Equal(t, http.StatusCreated, res.StatusCode)
 
 	tokens := &dto.TokenResponse{}
-	json.NewDecoder(res.Body).Decode(tokens)
+	require.NoError(t, json.NewDecoder(res.Body).Decode(tokens))
 	require.Equal(t, req.Email, tokens.User.Email)
 
 	return tokens

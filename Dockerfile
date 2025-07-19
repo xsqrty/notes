@@ -10,7 +10,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -v -o ./bin/notes -ldflags "-X '${PACKAGE}/internal/config.Version=${VERSION}' -X '${PACKAGE}/internal/config.AppName=${APP_NAME}'" ./cmd/notes.go
+RUN go build -v -o ./bin/notes -ldflags "-X '${PACKAGE}/internal/config.Version=${VERSION}' -X '${PACKAGE}/internal/config.AppName=${APP_NAME}'" ./cmd/notes/main.go
 
 FROM scratch
 COPY --from=builder /app/bin/notes .

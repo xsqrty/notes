@@ -1,0 +1,53 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - cyclop
+    - gocritic
+    - gosec
+    - ineffassign
+    - misspell
+    - prealloc
+    - unconvert
+    - unparam
+    - whitespace
+    - asciicheck
+    - bodyclose
+    - dupl
+    - govet
+    - goconst
+    - misspell
+    - staticcheck
+    - errorlint
+    - asasalint
+    - bidichk
+    - copyloopvar
+    - decorder
+    - dogsled
+    - dupword
+    - fatcontext
+    - funcorder
+    - godox
+    - importas
+    - nilnil
+    - paralleltest
+  settings:
+    cyclop:
+      max-complexity: 15
+    dupl:
+      threshold: 280
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - dupl
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 120

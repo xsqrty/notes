@@ -2,11 +2,13 @@ package help
 
 import (
 	"fmt"
-	"github.com/spf13/pflag"
 	"reflect"
 	"strings"
+
+	"github.com/spf13/pflag"
 )
 
+// GetHelp generates a detailed help message including command line arguments and environment variable descriptions.
 func GetHelp(base interface{}) string {
 	args := ""
 	envs := getStructEnvs(base)
@@ -41,6 +43,7 @@ func GetHelp(base interface{}) string {
 	return strings.TrimRight(result, "\n")
 }
 
+// getStructEnvs extracts and formats environment variable metadata from struct field tags, including defaults and descriptions.
 func getStructEnvs(base interface{}) string {
 	envs := ""
 	confType := reflect.TypeOf(base)

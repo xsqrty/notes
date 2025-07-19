@@ -1,11 +1,13 @@
 package mapping
 
 import (
-	"github.com/go-playground/validator/v10"
 	"reflect"
 	"strings"
+
+	"github.com/go-playground/validator/v10"
 )
 
+// mapping is a predefined map that associates validation tags with corresponding error message templates.
 var mapping = map[string]string{
 	"required":   `Field "{key}" is required`,
 	"email":      `Field "{key}" is incorrect email`,
@@ -16,6 +18,7 @@ var mapping = map[string]string{
 	"uuid":       `Field "{key}" is not a valid UUID`,
 }
 
+// MapValidatorErrors converts validation errors into a readable message and a map of field-specific error messages.
 func MapValidatorErrors(ve validator.ValidationErrors) (string, map[string]string) {
 	resultMessage := ""
 	resultOptions := make(map[string]string)
@@ -33,6 +36,7 @@ func MapValidatorErrors(ve validator.ValidationErrors) (string, map[string]strin
 	return resultMessage, resultOptions
 }
 
+// getMessage generates a user-friendly validation error message based on the provided FieldError.
 func getMessage(fe validator.FieldError) string {
 	message := ""
 	kind := fe.Kind()

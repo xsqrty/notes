@@ -5,9 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"github.com/xsqrty/notes/internal/api/rest"
@@ -16,12 +20,8 @@ import (
 	"github.com/xsqrty/notes/internal/dto"
 	"github.com/xsqrty/notes/internal/logger"
 	"github.com/xsqrty/notes/mocks/app/mock_app"
-	"github.com/xsqrty/notes/pkg/httputil/httpio"
-	"github.com/xsqrty/op/db"
-	"log"
-	"net/http"
-	"net/http/httptest"
-	"testing"
+	"github.com/xsqrty/notes/tests/testutil"
+	"github.com/xsqrty/op/db/postgres"
 )
 
 const (
@@ -30,21 +30,10 @@ const (
 	postgresDB   = "integration_test"
 )
 
-type integrationCase[REQ, RES any] struct {
-	name         string
-	req          *REQ
-	token        string
-	tokenFactory func() string
-	statusCode   int
-	expectedErr  *httpio.ErrorResponse
-	expected     *RES
-	additional   any
-	onSuccess    func()
-}
-
-var ctx = context.Background()
-var server *httptest.Server
-var rootTokens *dto.TokenResponse
+var (
+	ctx        = context.Background()
+	rootTokens *dto.TokenResponse
+)
 
 var (
 	rootEmail    = gofakeit.Email()
@@ -54,49 +43,44 @@ var (
 
 func TestMain(m *testing.M) {
 	dsn, cleanup, err := startPostgresContainer(ctx)
-	defer cleanup()
 	if err != nil {
-		log.Fatalf("failed to start container: %v", err)
+		log.Panicf("failed to start container: %v", err)
 	}
+	defer cleanup()
 
-	pool, err := db.OpenPostgres(ctx, dsn)
+	pool, err := postgres.Open(ctx, dsn)
 	if err != nil {
-		log.Fatalf("failed to connect to postgres: %v", err)
+		log.Panicf("failed to connect to postgres: %v", err)
 	}
 
 	err = mock_app.AutoMigrate("file://../../migrations", dsn)
 	if err != nil {
-		log.Fatalf("failed to auto migrate: %v", err)
+		log.Panicf("failed to auto migrate: %v", err)
 	}
 
 	cfg, err := config.NewConfig()
 	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
+		log.Panicf("failed to load config: %v", err)
 	}
 
 	deps := app.NewDeps(cfg, &logger.Logger{
 		Logger: zerolog.Nop(),
 	}, pool)
-	defer deps.Close()
+	defer deps.Close() // nolint: errcheck
 
-	server = httptest.NewServer(rest.NewRest(deps).Routes())
-	defer server.Close()
+	testutil.Server = httptest.NewServer(rest.NewRest(deps).Routes())
+	defer testutil.Server.Close()
 
 	rootTokens, err = signUpUser(&dto.SignUpRequest{
 		Email:    rootEmail,
 		Password: rootPassword,
 		Name:     rootName,
 	})
-
 	if err != nil {
-		log.Fatalf("failed to sign up user: %v", err)
+		log.Panicf("failed to sign up user: %v", err)
 	}
 
 	m.Run()
-}
-
-func withBaseUrl(url string) string {
-	return fmt.Sprintf("%s%s", server.URL, url)
 }
 
 func startPostgresContainer(ctx context.Context) (string, func(), error) {
@@ -116,7 +100,6 @@ func startPostgresContainer(ctx context.Context) (string, func(), error) {
 		ContainerRequest: req,
 		Started:          true,
 	})
-
 	if err != nil {
 		return "", nil, err
 	}
@@ -133,7 +116,7 @@ func startPostgresContainer(ctx context.Context) (string, func(), error) {
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", postgresUser, postgresPass, host, port.Port(), postgresDB)
 	return dsn, func() {
-		container.Terminate(ctx)
+		container.Terminate(ctx) // nolint: gosec, errcheck
 	}, nil
 }
 
@@ -143,11 +126,11 @@ func signUpUser(req *dto.SignUpRequest) (*dto.TokenResponse, error) {
 		return nil, err
 	}
 
-	res, err := http.Post(withBaseUrl("/api/v1/auth/signup"), "application/json", bytes.NewReader(jsonReq))
+	res, err := http.Post(testutil.WithBaseUrl("/api/v1/auth/signup"), "application/json", bytes.NewReader(jsonReq))
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer res.Body.Close() // nolint: errcheck
 
 	if res.StatusCode != http.StatusCreated {
 		return nil, fmt.Errorf("invalid response code: %d", res.StatusCode)
@@ -163,47 +146,4 @@ func generateAccessToken(t *testing.T) string {
 		Email:    gofakeit.Email(),
 		Password: gofakeit.Password(true, true, true, true, true, 20),
 	}).AccessToken
-}
-
-func (tc *integrationCase[REQ, RES]) run(t *testing.T, method, url string, checker func(expected, actual *RES)) {
-	t.Helper()
-	var jsonReq []byte
-
-	if tc.req != nil {
-		var err error
-		jsonReq, err = json.Marshal(tc.req)
-		require.NoError(t, err)
-	}
-
-	req, err := http.NewRequest(method, withBaseUrl(url), bytes.NewReader(jsonReq))
-	require.NoError(t, err)
-
-	token := tc.token
-	if tc.tokenFactory != nil {
-		token = tc.tokenFactory()
-	}
-
-	if token != "" {
-		req.Header.Add("Authorization", "Bearer "+token)
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer res.Body.Close()
-
-	require.Equal(t, tc.statusCode, res.StatusCode)
-
-	if tc.expected != nil {
-		n := new(RES)
-		json.NewDecoder(res.Body).Decode(n)
-		checker(tc.expected, n)
-		if tc.onSuccess != nil {
-			tc.onSuccess()
-		}
-	} else {
-		err := &httpio.ErrorResponse{}
-		json.NewDecoder(res.Body).Decode(err)
-		require.Equal(t, tc.expectedErr.Error.Code, err.Error.Code)
-		require.NotEmpty(t, err.Error.Message)
-	}
 }

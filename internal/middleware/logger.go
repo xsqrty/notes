@@ -3,19 +3,23 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/rs/zerolog"
 	"github.com/xsqrty/notes/internal/logger"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
-	"net/http"
-	"time"
 )
 
+// lk is a custom string type used to define specific keys for context or other application-specific purposes.
 type lk string
 
+// loggerKey is a context key used to store and retrieve the logger instance associated with an HTTP request.
 const (
 	loggerKey = lk("logger")
 )
 
+// Logger is an HTTP middleware that logs request and response details, including method, URL, status, and duration.
 func Logger(log *logger.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +39,7 @@ func Logger(log *logger.Logger) func(next http.Handler) http.Handler {
 	}
 }
 
+// Log retrieves the logger from the request's context associated with the loggerKey and returns it as a zerolog.Logger.
 func Log(r *http.Request) *zerolog.Logger {
 	return r.Context().Value(loggerKey).(*zerolog.Logger)
 }

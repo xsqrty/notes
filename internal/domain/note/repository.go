@@ -2,11 +2,13 @@ package note
 
 import (
 	"context"
+
 	"github.com/google/uuid"
 	"github.com/xsqrty/notes/internal/domain/search"
 	"github.com/xsqrty/notes/internal/domain/user"
 )
 
+// Repository defines the interface for managing Note entities.
 type Repository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*Note, error)
 	IDExists(ctx context.Context, id uuid.UUID) (bool, error)

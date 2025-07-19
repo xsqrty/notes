@@ -6,11 +6,15 @@ import (
 	"github.com/xsqrty/notes/internal/config"
 )
 
+// HttpMetrics represents metrics for tracking HTTP requests and their durations.
+// RequestsDuration measures the duration of HTTP requests.
+// RequestsTotal counts the total number of HTTP requests.
 type HttpMetrics struct {
 	RequestsDuration *prometheus.HistogramVec
 	RequestsTotal    *prometheus.CounterVec
 }
 
+// NewHttpMetrics initializes and returns an instance of HttpMetrics configured with the provided MetricsConfig.
 func NewHttpMetrics(cfg config.MetricsConfig) *HttpMetrics {
 	httpMetrics := &HttpMetrics{}
 	httpMetrics.RequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{

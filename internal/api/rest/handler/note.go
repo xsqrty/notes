@@ -2,6 +2,8 @@ package handler
 
 import (
 	"errors"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/xsqrty/notes/internal/adapter/dtoadapter"
@@ -12,17 +14,19 @@ import (
 	"github.com/xsqrty/notes/internal/middleware"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
 	"github.com/xsqrty/notes/pkg/httputil/httpio/errx"
-	"net/http"
 )
 
+// NoteHandler is responsible for handling HTTP requests related to notes.
 type NoteHandler struct {
 	deps *app.Deps
 }
 
+// NewNoteHandler initializes and returns a new instance of NoteHandler with the provided dependencies.
 func NewNoteHandler(deps *app.Deps) *NoteHandler {
 	return &NoteHandler{deps}
 }
 
+// Routes initialize and return a new chi.Mux router with configured routes for note handling operations.
 func (h *NoteHandler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Post("/", h.Create)
@@ -106,7 +110,9 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, err := httpio.Parse[dto.NoteRequest](http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)))
+	request, err := httpio.Parse[dto.NoteRequest](
+		http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)),
+	)
 	if err != nil {
 		middleware.Log(r).Debug().Err(err).Msg("create note handler parse request")
 		httpio.Error(w, http.StatusBadRequest, err)
@@ -159,7 +165,9 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, err := httpio.Parse[dto.NoteRequest](http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)))
+	request, err := httpio.Parse[dto.NoteRequest](
+		http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)),
+	)
 	if err != nil {
 		middleware.Log(r).Debug().Err(err).Msg("update note handler parse request")
 		httpio.Error(w, http.StatusBadRequest, err)
@@ -261,7 +269,9 @@ func (h *NoteHandler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request, err := httpio.Parse[search.Request](http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)))
+	request, err := httpio.Parse[search.Request](
+		http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)),
+	)
 	if err != nil {
 		middleware.Log(r).Debug().Err(err).Msg("search note handler parse request")
 		httpio.Error(w, http.StatusBadRequest, err)

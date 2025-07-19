@@ -2,10 +2,12 @@ package user
 
 import (
 	"database/sql"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
+// User represents a system user with account-related information.
 type User struct {
 	ID             uuid.UUID    `op:"id,primary"`
 	Name           string       `op:"name"`

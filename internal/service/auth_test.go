@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
@@ -15,7 +17,6 @@ import (
 	"github.com/xsqrty/notes/mocks/domain/mock_auth"
 	"github.com/xsqrty/notes/mocks/domain/mock_role"
 	"github.com/xsqrty/notes/mocks/domain/mock_user"
-	"testing"
 )
 
 func TestAuthService_Login(t *testing.T) {
@@ -132,7 +133,10 @@ func TestAuthService_SignUp(t *testing.T) {
 				repo.EXPECT().EmailExists(mock.Anything, email).Return(false, nil).Once()
 				passgen.EXPECT().Generate(password).Return(password, nil).Once()
 				repo.EXPECT().Save(mock.Anything, mock.Anything).Return(nil).Once()
-				roleRepo.EXPECT().AttachUserRolesByLabel(mock.Anything, role.LabelOnCreated, mock.Anything).Return(nil).Once()
+				roleRepo.EXPECT().
+					AttachUserRolesByLabel(mock.Anything, role.LabelOnCreated, mock.Anything).
+					Return(nil).
+					Once()
 				tokenizer.EXPECT().CreateRefreshToken(mock.Anything).Return(refreshToken, nil).Once()
 				tokenizer.EXPECT().CreateAccessToken(mock.Anything).Return(accessToken, nil).Once()
 			},
@@ -180,7 +184,10 @@ func TestAuthService_SignUp(t *testing.T) {
 				repo.EXPECT().EmailExists(mock.Anything, email).Return(false, nil).Once()
 				passgen.EXPECT().Generate(password).Return(password, nil).Once()
 				repo.EXPECT().Save(mock.Anything, mock.Anything).Return(nil).Once()
-				roleRepo.EXPECT().AttachUserRolesByLabel(mock.Anything, role.LabelOnCreated, mock.Anything).Return(errors.New("attach error")).Once()
+				roleRepo.EXPECT().
+					AttachUserRolesByLabel(mock.Anything, role.LabelOnCreated, mock.Anything).
+					Return(errors.New("attach error")).
+					Once()
 			},
 		},
 	}

@@ -2,6 +2,8 @@ package rest
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/xsqrty/notes/internal/api/rest/handler"
@@ -9,15 +11,17 @@ import (
 	"github.com/xsqrty/notes/internal/middleware"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
 	"github.com/xsqrty/notes/pkg/httputil/httpio/errx"
-	"net/http"
 )
 
+// Entrypoint defines the base path for the application's API routes.
 const Entrypoint = "/api/v1"
 
+// Rest is an interface that defines a method to retrieve application routes through an HTTP router.
 type Rest interface {
 	Routes() *chi.Mux
 }
 
+// rest is a struct that represents a RESTful application service, encapsulating application dependencies.
 type rest struct {
 	deps *app.Deps
 }
@@ -44,6 +48,7 @@ func NewRest(deps *app.Deps) Rest {
 	return &rest{deps}
 }
 
+// Routes initialize and return the primary HTTP router for the application, mounting all defined sub-routes and middleware.
 func (r *rest) Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Mount("/auth", handler.NewAuthHandler(r.deps).Routes())
@@ -70,7 +75,11 @@ func (r *rest) Routes() *chi.Mux {
 	})
 
 	entrypoint.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		httpio.Error(w, http.StatusNotFound, errx.New(errx.CodeNotFound, fmt.Sprintf("%s %s not found", r.Method, r.URL.RequestURI())))
+		httpio.Error(
+			w,
+			http.StatusNotFound,
+			errx.New(errx.CodeNotFound, fmt.Sprintf("%s %s not found", r.Method, r.URL.RequestURI())),
+		)
 	})
 
 	return entrypoint

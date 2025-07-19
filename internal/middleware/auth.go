@@ -4,26 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/xsqrty/notes/internal/config"
 	"github.com/xsqrty/notes/internal/domain/user"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
 	"github.com/xsqrty/notes/pkg/httputil/httpio/errx"
 	"github.com/xsqrty/notes/pkg/jwtsafe"
-	"net/http"
-	"strings"
 )
 
-var (
-	ErrUnauthorized   = errx.New(errx.CodeUnauthorized, "user not authorized")
-	ErrTokenExpired   = errx.New(errx.CodeTokenExpired, "token is expired")
-	ErrBearerRequired = errx.New(errx.CodeUnauthorized, "bearer token is required")
-)
-
-const (
-	secretSize = 32
-)
-
+// JWTAuthentication defines methods for managing JWT authentication, including token generation and verification.
 type JWTAuthentication interface {
 	Close() error
 	CreateAccessToken(user *user.User) (string, error)
@@ -33,22 +25,42 @@ type JWTAuthentication interface {
 	VerifyRefresh(next http.Handler) http.Handler
 }
 
+// jwtAuthentication is an internal implementation of the JWTAuthentication interface using JWTSafe for token management.
+// It facilitates the encoding, decoding, and verification of JWTs for handling access and refresh token workflows.
 type jwtAuthentication struct {
 	repo       user.Repository
-	userIdKey  string
 	accessJwt  jwtsafe.JWTSafe
 	refreshJwt jwtsafe.JWTSafe
 }
 
-func NewJWTAuthentication(userKey string, authConf *config.AuthConfig, repo user.Repository) JWTAuthentication {
+// userKeyType represents a custom type based on string, typically used for defining keys related to user-specific data.
+type userKeyType string
+
+var (
+	ErrUnauthorized   = errx.New(errx.CodeUnauthorized, "user not authorized")
+	ErrTokenExpired   = errx.New(errx.CodeTokenExpired, "token is expired")
+	ErrBearerRequired = errx.New(errx.CodeUnauthorized, "bearer token is required")
+)
+
+const (
+	// secretSize defines the size of the secret key used for encryption or signing.
+	secretSize = 32
+	// userIDClaimKey represents the claim key for storing the user ID in a token.
+	userIDClaimKey = "user_id"
+	// userKey is a key type used for identifying user-related context values.
+	userKey = userKeyType("user_id")
+)
+
+// NewJWTAuthentication initializes and returns a JWTAuthentication implementation.
+func NewJWTAuthentication(authConf *config.AuthConfig, repo user.Repository) JWTAuthentication {
 	return &jwtAuthentication{
 		repo:       repo,
-		userIdKey:  userKey,
 		accessJwt:  jwtsafe.New(authConf.AccessTokenExp, secretSize),
 		refreshJwt: jwtsafe.New(authConf.RefreshTokenExp, secretSize),
 	}
 }
 
+// Close releases resources held by accessJwt and refreshJwt; returns an error if any operation fails.
 func (j *jwtAuthentication) Close() error {
 	if err := j.accessJwt.Close(); err != nil {
 		return err
@@ -61,16 +73,20 @@ func (j *jwtAuthentication) Close() error {
 	return nil
 }
 
+// CreateAccessToken generates a new access token for the provided user and returns it as a string.
+// Returns an error if token encoding fails.
 func (j *jwtAuthentication) CreateAccessToken(user *user.User) (string, error) {
-	return j.accessJwt.Encode(jwtsafe.MapClaims{j.userIdKey: user.ID})
+	return j.accessJwt.Encode(jwtsafe.MapClaims{userIDClaimKey: user.ID})
 }
 
+// CreateRefreshToken generates a new refresh token for the given user and returns it as a string.
 func (j *jwtAuthentication) CreateRefreshToken(user *user.User) (string, error) {
-	return j.refreshJwt.Encode(jwtsafe.MapClaims{j.userIdKey: user.ID})
+	return j.refreshJwt.Encode(jwtsafe.MapClaims{userIDClaimKey: user.ID})
 }
 
+// GetUser retrieves a user from the request context using the extracted user ID and fetches the user details from the repository.
 func (j *jwtAuthentication) GetUser(r *http.Request) (*user.User, error) {
-	idCtx := r.Context().Value(j.userIdKey)
+	idCtx := r.Context().Value(userKey)
 	if idCtx == nil {
 		return nil, fmt.Errorf("ctx doesn't have user_id: %w", ErrUnauthorized)
 	}
@@ -88,14 +104,17 @@ func (j *jwtAuthentication) GetUser(r *http.Request) (*user.User, error) {
 	return user, nil
 }
 
+// Verify is a middleware that validates the access JWT and adds the user ID to the request context if valid.
 func (j *jwtAuthentication) Verify(next http.Handler) http.Handler {
 	return j.verify(j.accessJwt)(next)
 }
 
+// VerifyRefresh authenticates HTTP requests using a refresh JWT for token validation.
 func (j *jwtAuthentication) VerifyRefresh(next http.Handler) http.Handler {
 	return j.verify(j.refreshJwt)(next)
 }
 
+// verify creates middleware to validate JWT tokens and inject the user ID from the claims into the request context.
 func (j *jwtAuthentication) verify(jwt jwtsafe.JWTSafe) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -116,8 +135,8 @@ func (j *jwtAuthentication) verify(jwt jwtsafe.JWTSafe) func(http.Handler) http.
 				return
 			}
 
-			if userId, ok := claims[j.userIdKey].(string); ok {
-				next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), j.userIdKey, userId)))
+			if userId, ok := claims[userIDClaimKey].(string); ok {
+				next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), userKey, userId)))
 				return
 			}
 

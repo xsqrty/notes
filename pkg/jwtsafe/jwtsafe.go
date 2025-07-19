@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -21,55 +22,57 @@ var (
 )
 
 var (
-	hs265Alg       = []byte(`{"alg":"HS256","typ":"JWT"}`)
+	// hs265Alg defines the JSON header message encoding algorithm and type for HS256 JWT.
+	hs265Alg = []byte(`{"alg":"HS256","typ":"JWT"}`)
+	// hs265AlgHeader is the base64 URL-encoded representation of hs265Alg.
 	hs265AlgHeader = base64.RawURLEncoding.EncodeToString(hs265Alg)
 )
 
+// JWTSafe is an interface for encoding and decoding JWTs securely.
 type JWTSafe interface {
 	Encode(claims MapClaims) (string, error)
 	Decode(token string) (MapClaims, error)
 	Close() error
 }
 
+// MapClaims represents a map of string keys to interface{} values, commonly used to define JWT claims.
 type MapClaims map[string]interface{}
 
+// keyPair represents a structure holding the current and previous cryptographic keys as byte slices.
 type keyPair struct {
 	cur  []byte
 	prev []byte
 }
 
+// jwtSafe manages JSON Web Token (JWT) operations with rotating secret keys for enhanced security.
+// It periodically rotates the secret key, encodes claims to tokens, decodes tokens, and validates signatures.
 type jwtSafe struct {
 	ticker     *time.Ticker
 	keyPair    atomic.Pointer[keyPair]
 	secretSize int
 	expires    time.Duration
-	done       chan struct{}
+	closeOnce  sync.Once
 }
 
+// New creates and returns a new jwtSafe instance initialized with the specified expiration duration and secret size.
 func New(expires time.Duration, secretSize int) *jwtSafe {
 	js := &jwtSafe{
 		secretSize: secretSize,
 		expires:    expires,
 		ticker:     time.NewTicker(expires),
-		done:       make(chan struct{}),
 	}
 
 	js.rotateKey()
-
 	go func() {
-		for {
-			select {
-			case <-js.ticker.C:
-				js.rotateKey()
-			case <-js.done:
-				return
-			}
+		for range js.ticker.C {
+			js.rotateKey()
 		}
 	}()
 
 	return js
 }
 
+// Encode generates a signed JWT token from the provided claims and returns it as a string or an error if creation fails.
 func (js *jwtSafe) Encode(claims MapClaims) (string, error) {
 	claims["exp"] = time.Now().Add(js.expires).Unix()
 
@@ -87,6 +90,7 @@ func (js *jwtSafe) Encode(claims MapClaims) (string, error) {
 	return unsigned + "." + js.sign(unsigned, pair.cur), nil
 }
 
+// Decode validates and decodes a JWT token, returning its claims or an error if the token is invalid or expired.
 func (js *jwtSafe) Decode(token string) (MapClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
@@ -123,18 +127,24 @@ func (js *jwtSafe) Decode(token string) (MapClaims, error) {
 	return claims, nil
 }
 
+// Close stops the ticker. It ensures the operation runs only once.
 func (js *jwtSafe) Close() error {
-	js.ticker.Stop()
-	close(js.done)
+	js.closeOnce.Do(func() {
+		js.ticker.Stop()
+	})
+
 	return nil
 }
 
+// sign generates a base64-encoded HMAC-SHA256 hash of the provided unsigned string using the specified key.
 func (js *jwtSafe) sign(unsigned string, key []byte) string {
 	h := hmac.New(sha256.New, key)
 	h.Write([]byte(unsigned))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 
+// Verify checks if the provided signature matches any of the HMAC signatures generated using the given keys.
+// Returns true if a match is found, otherwise returns false.
 func (js *jwtSafe) verify(unsigned string, signature string, keys [2][]byte) bool {
 	for _, key := range keys {
 		if key == nil {
@@ -149,6 +159,7 @@ func (js *jwtSafe) verify(unsigned string, signature string, keys [2][]byte) boo
 	return false
 }
 
+// rotateKey generates a new cryptographic key and updates the current and previous key pair for signing and verification.
 func (js *jwtSafe) rotateKey() {
 	key := make([]byte, js.secretSize)
 	if _, err := rand.Read(key); err != nil {

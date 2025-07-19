@@ -109,3 +109,17 @@ Run service `task run` and open in browser http://localhost:1323
 ```shell
 task swag:fmt
 ```
+
+## Linter
+
+* Run linter
+
+```shell
+task lint
+```
+
+* To format code
+
+```shell
+task lint:fmt
+```

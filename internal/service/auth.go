@@ -3,13 +3,15 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/xsqrty/notes/internal/domain/auth"
 	"github.com/xsqrty/notes/internal/domain/role"
 	"github.com/xsqrty/notes/internal/domain/tx"
 	"github.com/xsqrty/notes/internal/domain/user"
-	"time"
 )
 
+// AuthServiceDeps defines dependencies required by the AuthService.
 type AuthServiceDeps struct {
 	UserRepo  user.Repository
 	RoleRepo  role.Repository
@@ -18,6 +20,7 @@ type AuthServiceDeps struct {
 	TxManager tx.Manager
 }
 
+// authService is a private implementation of the authentication service interface.
 type authService struct {
 	tokenizer auth.Tokenizer
 	roleRepo  role.Repository
@@ -26,6 +29,7 @@ type authService struct {
 	tx        tx.Manager
 }
 
+// NewAuthService creates a new instance of auth.Service with necessary dependencies for authentication operations.
 func NewAuthService(deps *AuthServiceDeps) auth.Service {
 	return &authService{
 		tokenizer: deps.Tokenizer,
@@ -36,6 +40,7 @@ func NewAuthService(deps *AuthServiceDeps) auth.Service {
 	}
 }
 
+// Login authenticates the user using the provided credentials and returns the generated access and refresh tokens.
 func (s *authService) Login(ctx context.Context, login *auth.Login) (*auth.Tokens, error) {
 	user, err := s.userRepo.GetByEmail(ctx, login.Email)
 	if err != nil {
@@ -49,6 +54,7 @@ func (s *authService) Login(ctx context.Context, login *auth.Login) (*auth.Token
 	return s.GenerateTokens(user)
 }
 
+// SignUp registers a new user with the provided data and generates authentication tokens. Returns tokens or an error.
 func (s *authService) SignUp(ctx context.Context, data *auth.SignUp) (*auth.Tokens, error) {
 	isExist, err := s.userRepo.EmailExists(ctx, data.Email)
 	if err != nil {
@@ -83,7 +89,6 @@ func (s *authService) SignUp(ctx context.Context, data *auth.SignUp) (*auth.Toke
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +96,7 @@ func (s *authService) SignUp(ctx context.Context, data *auth.SignUp) (*auth.Toke
 	return s.GenerateTokens(user)
 }
 
+// GenerateTokens creates and returns new access and refresh tokens associated with the given user.
 func (s *authService) GenerateTokens(user *user.User) (*auth.Tokens, error) {
 	accessToken, err := s.tokenizer.CreateAccessToken(user)
 	if err != nil {

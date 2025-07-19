@@ -2,13 +2,18 @@ package swag
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/go-chi/chi/v5"
-	"github.com/swaggo/http-swagger"
+	httpSwagger "github.com/swaggo/http-swagger"
 	_ "github.com/xsqrty/notes/docs"
 	"github.com/xsqrty/notes/internal/config"
-	"net/http"
 )
 
+// NewSwagServer initializes and returns a new HTTP server configured for serving Swagger documentation.
+// It sets up routing to handle requests to the root and Swagger UI.
+// The server's address is determined by the given SwagConfig.
 func NewSwagServer(cfg config.SwagConfig) *http.Server {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	router := chi.NewRouter()
@@ -22,7 +27,8 @@ func NewSwagServer(cfg config.SwagConfig) *http.Server {
 	))
 
 	return &http.Server{
-		Addr:    addr,
-		Handler: router,
+		Addr:              addr,
+		Handler:           router,
+		ReadHeaderTimeout: time.Second * 10,
 	}
 }

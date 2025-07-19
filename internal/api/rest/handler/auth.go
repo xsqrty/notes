@@ -2,6 +2,8 @@ package handler
 
 import (
 	"errors"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/xsqrty/notes/internal/adapter/dtoadapter"
 	"github.com/xsqrty/notes/internal/app"
@@ -10,17 +12,19 @@ import (
 	"github.com/xsqrty/notes/internal/middleware"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
 	"github.com/xsqrty/notes/pkg/httputil/httpio/errx"
-	"net/http"
 )
 
+// AuthHandler handles authentication-related HTTP requests.
 type AuthHandler struct {
 	deps *app.Deps
 }
 
+// NewAuthHandler creates a new instance of AuthHandler with the provided dependencies.
 func NewAuthHandler(deps *app.Deps) *AuthHandler {
 	return &AuthHandler{deps}
 }
 
+// Routes sets up the HTTP routes for authentication.
 func (h *AuthHandler) Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Post("/signup", h.SignUp)
@@ -42,7 +46,9 @@ func (h *AuthHandler) Routes() *chi.Mux {
 //	@Failure		401		{object}	httpio.ErrorResponse
 //	@Router			/auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	request, err := httpio.Parse[dto.LoginRequest](http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)))
+	request, err := httpio.Parse[dto.LoginRequest](
+		http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)),
+	)
 	if err != nil {
 		middleware.Log(r).Debug().Err(err).Msg("get tokens parse request")
 		httpio.Error(w, http.StatusBadRequest, err)
@@ -73,7 +79,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500		{object}	httpio.ErrorResponse
 //	@Router			/auth/signup [post]
 func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
-	request, err := httpio.Parse[dto.SignUpRequest](http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)))
+	request, err := httpio.Parse[dto.SignUpRequest](
+		http.MaxBytesReader(w, r.Body, int64(h.deps.Config.Server.LimitReqJson)),
+	)
 	if err != nil {
 		middleware.Log(r).Debug().Err(err).Msg("signup handler parse request")
 		httpio.Error(w, http.StatusBadRequest, err)

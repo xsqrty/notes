@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
@@ -19,9 +23,6 @@ import (
 	"github.com/xsqrty/notes/mocks/middleware/mock_middleware"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
 	"github.com/xsqrty/notes/pkg/httputil/httpio/errx"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestAuthHandler_Login(t *testing.T) {
@@ -52,7 +53,10 @@ func TestAuthHandler_Login(t *testing.T) {
 			},
 			expected: dtoadapter.TokensToResponseDto(tokens),
 			mocker: func(req *dto.LoginRequest, service *mock_auth.Service) {
-				service.EXPECT().Login(mock.Anything, dtoadapter.LoginRequestDtoToEntity(req)).Return(tokens, nil).Once()
+				service.EXPECT().
+					Login(mock.Anything, dtoadapter.LoginRequestDtoToEntity(req)).
+					Return(tokens, nil).
+					Once()
 			},
 		},
 		{
@@ -79,7 +83,10 @@ func TestAuthHandler_Login(t *testing.T) {
 				},
 			},
 			mocker: func(req *dto.LoginRequest, service *mock_auth.Service) {
-				service.EXPECT().Login(mock.Anything, dtoadapter.LoginRequestDtoToEntity(req)).Return(nil, errors.New("login error")).Once()
+				service.EXPECT().
+					Login(mock.Anything, dtoadapter.LoginRequestDtoToEntity(req)).
+					Return(nil, errors.New("login error")).
+					Once()
 			},
 		},
 	}
@@ -157,7 +164,10 @@ func TestAuthHandler_SignUp(t *testing.T) {
 			},
 			expected: dtoadapter.TokensToResponseDto(tokens),
 			mocker: func(req *dto.SignUpRequest, service *mock_auth.Service) {
-				service.EXPECT().SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).Return(tokens, nil).Once()
+				service.EXPECT().
+					SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).
+					Return(tokens, nil).
+					Once()
 			},
 		},
 		{
@@ -185,7 +195,10 @@ func TestAuthHandler_SignUp(t *testing.T) {
 				},
 			},
 			mocker: func(req *dto.SignUpRequest, service *mock_auth.Service) {
-				service.EXPECT().SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).Return(nil, auth.ErrEmailAlreadyExists).Once()
+				service.EXPECT().
+					SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).
+					Return(nil, auth.ErrEmailAlreadyExists).
+					Once()
 			},
 		},
 		{
@@ -203,7 +216,10 @@ func TestAuthHandler_SignUp(t *testing.T) {
 				},
 			},
 			mocker: func(req *dto.SignUpRequest, service *mock_auth.Service) {
-				service.EXPECT().SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).Return(nil, errors.New("some error")).Once()
+				service.EXPECT().
+					SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).
+					Return(nil, errors.New("some error")).
+					Once()
 			},
 		},
 	}

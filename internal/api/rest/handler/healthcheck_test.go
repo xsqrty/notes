@@ -2,15 +2,16 @@ package handler
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/require"
 	"github.com/xsqrty/notes/internal/app"
 	"github.com/xsqrty/notes/internal/dto"
 	"github.com/xsqrty/notes/mocks/app/mock_app"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-	"time"
 )
 
 func TestHealthCheckHandler_Healthcheck(t *testing.T) {

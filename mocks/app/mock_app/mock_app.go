@@ -1,6 +1,9 @@
 package mock_app
 
 import (
+	"net/url"
+	"testing"
+
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -11,8 +14,6 @@ import (
 	"github.com/xsqrty/notes/mocks/domain/mock_auth"
 	"github.com/xsqrty/notes/mocks/domain/mock_note"
 	"github.com/xsqrty/notes/pkg/config/size"
-	"net/url"
-	"testing"
 )
 
 func NewDeps(t *testing.T, mocker func(deps *app.Deps)) *app.Deps {

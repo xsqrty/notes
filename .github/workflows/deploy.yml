@@ -9,9 +9,22 @@ env:
   APP_VERSION: ${{ github.ref_name }}
 
 jobs:
+  lint:
+    name: Run linters
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: './go.mod'
+      - name: Run linters
+        uses: golangci/golangci-lint-action@v8
+        with:
+          args: --verbose
   test:
     name: Tests
     runs-on: ubuntu-22.04
+    needs: lint
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -19,7 +32,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version-file: './go.mod'
 
       - name: Install dependencies
         run: go mod download

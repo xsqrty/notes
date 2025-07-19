@@ -11,5 +11,5 @@ const (
 	CodeValidation       = "errors.validation"
 	CodeJsonParse        = "errors.jsonParse"
 	CodeMethodNotAllowed = "errors.methodNotAllowed"
-	CodeTokenExpired     = "errors.tokenExpired"
+	CodeTokenExpired     = "errors.tokenExpired" // nolint: gosec
 )

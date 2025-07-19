@@ -1,0 +1,1 @@
+create index idx_roles_permissions on public.roles using gin (permissions);

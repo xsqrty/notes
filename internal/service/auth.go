@@ -11,7 +11,7 @@ import (
 	"github.com/xsqrty/notes/internal/domain/user"
 )
 
-// AuthServiceDeps defines dependencies required by the AuthService.
+// AuthServiceDeps defines dependencies required by the authService.
 type AuthServiceDeps struct {
 	UserRepo  user.Repository
 	RoleRepo  role.Repository
@@ -42,16 +42,16 @@ func NewAuthService(deps *AuthServiceDeps) auth.Service {
 
 // Login authenticates the user using the provided credentials and returns the generated access and refresh tokens.
 func (s *authService) Login(ctx context.Context, login *auth.Login) (*auth.Tokens, error) {
-	user, err := s.userRepo.GetByEmail(ctx, login.Email)
+	u, err := s.userRepo.GetByEmail(ctx, login.Email)
 	if err != nil {
-		return nil, fmt.Errorf("login: %w", auth.ErrUserNotFound)
+		return nil, fmt.Errorf("login: %w", err)
 	}
 
-	if !s.passGen.Compare(user.HashedPassword, login.Password) {
+	if !s.passGen.Compare(u.HashedPassword, login.Password) {
 		return nil, fmt.Errorf("login: %w", auth.ErrPasswordIncorrect)
 	}
 
-	return s.GenerateTokens(user)
+	return s.GenerateTokens(u)
 }
 
 // SignUp registers a new user with the provided data and generates authentication tokens. Returns tokens or an error.

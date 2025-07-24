@@ -58,7 +58,7 @@ func TestAuthService_Login(t *testing.T) {
 			expected:    nil,
 			expectedErr: "login: user not found",
 			mocker: func(repo *mock_user.Repository, tokenizer *mock_auth.Tokenizer, passgen *mock_auth.PasswordGenerator) {
-				repo.EXPECT().GetByEmail(mock.Anything, email).Return(nil, errors.New("no rows")).Once()
+				repo.EXPECT().GetByEmail(mock.Anything, email).Return(nil, user.ErrNotFound).Once()
 			},
 		},
 		{

@@ -35,13 +35,6 @@ linters:
   settings:
     cyclop:
       max-complexity: 15
-    dupl:
-      threshold: 280
-  exclusions:
-    rules:
-      - path: _test\.go
-        linters:
-          - dupl
 
 formatters:
   enable:

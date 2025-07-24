@@ -30,7 +30,7 @@ func (h *HealthCheckHandler) Routes() *chi.Mux {
 // Healthcheck handler
 //
 //	@Summary		Healthcheck
-//	@Description	Get application version, name, current time
+//	@Description	Get application version, Name, current time
 //	@Tags			Healthcheck
 //	@Produce		json
 //	@Success		200	{object}	dto.HealthCheckResponse

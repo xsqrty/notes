@@ -19,44 +19,54 @@ vars:
 
 tasks:
   test:
+    desc: Run tests (unit, integration)
     silent: true
     cmds:
       - go clean -cache
       - go test -v -timeout 10m -race -covermode atomic -coverprofile=coverage.out -coverpkg=github.com/xsqrty/notes/... ./...
       - echo Total coverage $(go tool cover -func=coverage.out | tail -n 1 | awk '{print $3}')
   lint:
+    desc: Run golangci-lint
     silent: true
     cmds:
       - "{{.LINTER_BIN}} run"
   lint:fmt:
+    desc: Run golangci-lint fmt (files formatter)
     silent: true
     cmds:
       - "{{.LINTER_BIN}} fmt"
   mock:generate:
+    desc: Generate (re-generate) mock files
     silent: true
     cmds:
       - "{{.MOCKERY_BIN}}"
   swag:fmt:
+    desc: Run swagger formatter for comments
     silent: true
     cmds:
       - "{{.SWAG_BIN}} fmt"
   swag:generate:
+    desc: Generate swagger documentations
     silent: true
     cmds:
       - "{{.SWAG_BIN}} init -g {{.REST_ENTRY}}"
   migrate:up:
+    desc: Run migrations
     silent: true
     cmds:
       - "{{.MIGRATE_BIN}} -path {{.MIGRATIONS_DIR}} -database {{.DSN}} up"
   migrate:down:
+    desc: Downgrade migration level by 1 step
     silent: true
     cmds:
       - "{{.MIGRATE_BIN}} -path {{.MIGRATIONS_DIR}} -database {{.DSN}} down 1"
   migrate:version:
+    desc: Check migration version
     silent: true
     cmds:
       - "{{.MIGRATE_BIN}} -path {{.MIGRATIONS_DIR}} -database {{.DSN}} version"
   migrate:create:*:
+    desc: Create migration (* - migration name)
     vars:
       NAME: "{{index .MATCH 0}}"
     silent: true
@@ -64,6 +74,7 @@ tasks:
       - echo "Create migration {{ .NAME }} in {{.MIGRATIONS_DIR}}"
       - "{{.MIGRATE_BIN}} create -dir {{.MIGRATIONS_DIR}} -ext sql {{.NAME}}"
   install:
+    desc: Install project dependencies
     silent: true
     cmds:
       - GOBIN={{.DEPS_DIR}} go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.3
@@ -71,10 +82,12 @@ tasks:
       - GOBIN={{.DEPS_DIR}} go install github.com/vektra/mockery/v3@v3.4.0
       - GOBIN={{.DEPS_DIR}} go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.2
   build:dev:
+    desc: Build application with dev version (can check with a flag --version)
     silent: true
     cmds:
       - task build:0.0.0-dev
   build:*:
+    desc: Build application with concrete version (* - application version)
     vars:
       VERSION: "{{index .MATCH 0}}"
     silent: true

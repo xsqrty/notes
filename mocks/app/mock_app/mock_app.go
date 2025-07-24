@@ -1,7 +1,6 @@
 package mock_app
 
 import (
-	"net/url"
 	"testing"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -37,16 +36,7 @@ func NewDeps(t *testing.T, mocker func(deps *app.Deps)) *app.Deps {
 }
 
 func AutoMigrate(source, dsn string) error {
-	parsed, err := url.Parse(dsn)
-	if err != nil {
-		return err
-	}
-
-	q := parsed.Query()
-	q.Set("sslmode", "disable")
-	parsed.RawQuery = q.Encode()
-
-	m, err := migrate.New(source, parsed.String())
+	m, err := migrate.New(source, dsn)
 	if err != nil {
 		return err
 	}

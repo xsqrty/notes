@@ -9,7 +9,6 @@ import (
 var (
 	ErrEmailAlreadyExists = errors.New("email already exists")
 	ErrPasswordIncorrect  = errors.New("password incorrect")
-	ErrUserNotFound       = errors.New("user not found")
 )
 
 // Tokenizer defines methods for creating access and refresh tokens for user authentication.

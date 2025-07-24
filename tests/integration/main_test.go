@@ -114,7 +114,14 @@ func startPostgresContainer(ctx context.Context) (string, func(), error) {
 		return "", nil, err
 	}
 
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", postgresUser, postgresPass, host, port.Port(), postgresDB)
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		postgresUser,
+		postgresPass,
+		host,
+		port.Port(),
+		postgresDB,
+	)
 	return dsn, func() {
 		container.Terminate(ctx) // nolint: gosec, errcheck
 	}, nil

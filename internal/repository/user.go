@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/xsqrty/notes/internal/domain/user"
+	"github.com/xsqrty/notes/pkg/repoutil"
 	"github.com/xsqrty/op"
 	"github.com/xsqrty/op/db"
 	"github.com/xsqrty/op/orm"
@@ -56,24 +57,24 @@ func (r *userRepo) EmailExists(ctx context.Context, email string) (bool, error) 
 
 // GetByEmail retrieves a user by their email address from the table.
 func (r *userRepo) GetByEmail(ctx context.Context, email string) (*user.User, error) {
-	user, err := orm.Query[user.User](
+	u, err := orm.Query[user.User](
 		op.Select().From(usersTableName).Where(op.Eq("email", email)),
 	).GetOne(ctx, r.qe)
 	if err != nil {
-		return nil, fmt.Errorf("get user by email: %w", err)
+		return nil, fmt.Errorf("get user by email: %w", repoutil.RedefineNoRowsError(err, user.ErrNotFound))
 	}
 
-	return user, nil
+	return u, nil
 }
 
 // GetByID retrieves a user by their ID from the database.
 func (r *userRepo) GetByID(ctx context.Context, id uuid.UUID) (*user.User, error) {
-	user, err := orm.Query[user.User](
+	u, err := orm.Query[user.User](
 		op.Select().From(usersTableName).Where(op.Eq("id", id)),
 	).GetOne(ctx, r.qe)
 	if err != nil {
-		return nil, fmt.Errorf("get user by id: %w", err)
+		return nil, fmt.Errorf("get user by id: %w", repoutil.RedefineNoRowsError(err, user.ErrNotFound))
 	}
 
-	return user, nil
+	return u, nil
 }

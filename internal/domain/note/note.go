@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	ErrNoteNotFound                  = errors.New("note not found")
-	ErrNoteSearchBadRequest          = errors.New("search bad request")
-	ErrNoteOperationForbiddenForUser = errors.New("note operation is forbidden for user")
+	ErrNotFound                  = errors.New("note not found")
+	ErrSearchBadRequest          = errors.New("search bad request")
+	ErrOperationForbiddenForUser = errors.New("note operation is forbidden for user")
 )
 
 const (

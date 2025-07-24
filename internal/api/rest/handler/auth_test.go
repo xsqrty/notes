@@ -1,29 +1,30 @@
 package handler
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"github.com/xsqrty/notes/internal/adapter/dtoadapter"
 	"github.com/xsqrty/notes/internal/app"
 	"github.com/xsqrty/notes/internal/domain/auth"
 	"github.com/xsqrty/notes/internal/domain/user"
 	"github.com/xsqrty/notes/internal/dto"
-	"github.com/xsqrty/notes/internal/middleware"
 	"github.com/xsqrty/notes/mocks/app/mock_app"
 	"github.com/xsqrty/notes/mocks/domain/mock_auth"
 	"github.com/xsqrty/notes/mocks/middleware/mock_middleware"
 	"github.com/xsqrty/notes/pkg/httputil/httpio"
 	"github.com/xsqrty/notes/pkg/httputil/httpio/errx"
+	"github.com/xsqrty/notes/tests/testutil"
 )
+
+type authDeps struct {
+	mw      *mock_middleware.JWTAuthentication
+	service *mock_auth.Service
+}
 
 func TestAuthHandler_Login(t *testing.T) {
 	t.Parallel()
@@ -36,54 +37,47 @@ func TestAuthHandler_Login(t *testing.T) {
 		},
 	}
 
-	cases := []struct {
-		name        string
-		req         *dto.LoginRequest
-		statusCode  int
-		expected    *dto.TokenResponse
-		expectedErr *httpio.ErrorResponse
-		mocker      func(req *dto.LoginRequest, service *mock_auth.Service)
-	}{
+	cases := []testutil.HandlerCase[*dto.LoginRequest, *dto.TokenResponse, *authDeps]{
 		{
-			name:       "successful_login",
-			statusCode: http.StatusCreated,
-			req: &dto.LoginRequest{
+			Name:       "successful_login",
+			StatusCode: http.StatusCreated,
+			Req: &dto.LoginRequest{
 				Email:    gofakeit.Email(),
 				Password: gofakeit.Password(true, true, true, true, true, 10),
 			},
-			expected: dtoadapter.TokensToResponseDto(tokens),
-			mocker: func(req *dto.LoginRequest, service *mock_auth.Service) {
-				service.EXPECT().
+			Expected: dtoadapter.TokensToResponseDto(tokens),
+			Mocker: func(req *dto.LoginRequest, d *authDeps) {
+				d.service.EXPECT().
 					Login(mock.Anything, dtoadapter.LoginRequestDtoToEntity(req)).
 					Return(tokens, nil).
 					Once()
 			},
 		},
 		{
-			name:       "request_error",
-			statusCode: http.StatusBadRequest,
-			req:        &dto.LoginRequest{},
-			expectedErr: &httpio.ErrorResponse{
+			Name:       "request_error",
+			StatusCode: http.StatusBadRequest,
+			Req:        &dto.LoginRequest{},
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeValidation,
 				},
 			},
 		},
 		{
-			name:       "login_error",
-			statusCode: http.StatusUnauthorized,
-			req: &dto.LoginRequest{
+			Name:       "login_error",
+			StatusCode: http.StatusUnauthorized,
+			Req: &dto.LoginRequest{
 				Email:    gofakeit.Email(),
 				Password: gofakeit.Password(true, true, true, true, true, 10),
 			},
-			expected: nil,
-			expectedErr: &httpio.ErrorResponse{
+			Expected: nil,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeUnauthorized,
 				},
 			},
-			mocker: func(req *dto.LoginRequest, service *mock_auth.Service) {
-				service.EXPECT().
+			Mocker: func(req *dto.LoginRequest, d *authDeps) {
+				d.service.EXPECT().
 					Login(mock.Anything, dtoadapter.LoginRequestDtoToEntity(req)).
 					Return(nil, errors.New("login error")).
 					Once()
@@ -92,41 +86,19 @@ func TestAuthHandler_Login(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 
 			service := mock_auth.NewService(t)
-			deps := mock_app.NewDeps(t, func(deps *app.Deps) {
-				deps.Service.AuthService = service
+			tc.Run(t, http.MethodPost, "/api/v1/auth/login", func() *authDeps {
+				return &authDeps{
+					service: service,
+				}
+			}, func(d *authDeps) http.HandlerFunc {
+				return NewAuthHandler(mock_app.NewDeps(t, func(deps *app.Deps) {
+					deps.Service.AuthService = service
+				})).Login
 			})
-
-			handler := NewAuthHandler(deps)
-			if tc.mocker != nil {
-				tc.mocker(tc.req, service)
-			}
-
-			body, err := json.Marshal(tc.req)
-			require.NoError(t, err)
-
-			r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(body))
-			w := httptest.NewRecorder()
-
-			middleware.Logger(deps.Logger)(http.HandlerFunc(handler.Login)).ServeHTTP(w, r)
-			res := w.Result()
-
-			require.Equal(t, tc.statusCode, res.StatusCode)
-			if tc.expected != nil {
-				result := dto.TokenResponse{}
-				require.NoError(t, json.NewDecoder(res.Body).Decode(&result))
-				require.Equal(t, tc.expected, &result)
-				require.NotEmpty(t, result.AccessToken)
-				require.NotEmpty(t, result.RefreshToken)
-			} else {
-				err := httpio.ErrorResponse{}
-				require.NoError(t, json.NewDecoder(res.Body).Decode(&err))
-				require.Equal(t, tc.expectedErr.Error.Code, err.Error.Code)
-				require.NotEmpty(t, err.Error.Message)
-			}
 
 			mock.AssertExpectationsForObjects(t, service)
 		})
@@ -146,77 +118,70 @@ func TestAuthHandler_SignUp(t *testing.T) {
 		},
 	}
 
-	cases := []struct {
-		name        string
-		req         *dto.SignUpRequest
-		statusCode  int
-		expected    *dto.TokenResponse
-		expectedErr *httpio.ErrorResponse
-		mocker      func(req *dto.SignUpRequest, service *mock_auth.Service)
-	}{
+	cases := []testutil.HandlerCase[*dto.SignUpRequest, *dto.TokenResponse, *authDeps]{
 		{
-			name:       "successful_signup",
-			statusCode: http.StatusCreated,
-			req: &dto.SignUpRequest{
+			Name:       "successful_signup",
+			StatusCode: http.StatusCreated,
+			Req: &dto.SignUpRequest{
 				Name:     gofakeit.Name(),
 				Email:    gofakeit.Email(),
 				Password: gofakeit.Password(true, true, true, true, true, 10),
 			},
-			expected: dtoadapter.TokensToResponseDto(tokens),
-			mocker: func(req *dto.SignUpRequest, service *mock_auth.Service) {
-				service.EXPECT().
+			Expected: dtoadapter.TokensToResponseDto(tokens),
+			Mocker: func(req *dto.SignUpRequest, d *authDeps) {
+				d.service.EXPECT().
 					SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).
 					Return(tokens, nil).
 					Once()
 			},
 		},
 		{
-			name:       "request_error",
-			statusCode: http.StatusBadRequest,
-			req:        &dto.SignUpRequest{},
-			expectedErr: &httpio.ErrorResponse{
+			Name:       "request_error",
+			StatusCode: http.StatusBadRequest,
+			Req:        &dto.SignUpRequest{},
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeValidation,
 				},
 			},
 		},
 		{
-			name:       "email_already_exists",
-			statusCode: http.StatusBadRequest,
-			req: &dto.SignUpRequest{
+			Name:       "email_already_exists",
+			StatusCode: http.StatusBadRequest,
+			Req: &dto.SignUpRequest{
 				Name:     gofakeit.Name(),
 				Email:    gofakeit.Email(),
 				Password: gofakeit.Password(true, true, true, true, true, 10),
 			},
-			expected: nil,
-			expectedErr: &httpio.ErrorResponse{
+			Expected: nil,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeEmailExists,
 				},
 			},
-			mocker: func(req *dto.SignUpRequest, service *mock_auth.Service) {
-				service.EXPECT().
+			Mocker: func(req *dto.SignUpRequest, d *authDeps) {
+				d.service.EXPECT().
 					SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).
 					Return(nil, auth.ErrEmailAlreadyExists).
 					Once()
 			},
 		},
 		{
-			name:       "unknown_error",
-			statusCode: http.StatusInternalServerError,
-			req: &dto.SignUpRequest{
+			Name:       "unknown_error",
+			StatusCode: http.StatusInternalServerError,
+			Req: &dto.SignUpRequest{
 				Name:     gofakeit.Name(),
 				Email:    gofakeit.Email(),
 				Password: gofakeit.Password(true, true, true, true, true, 10),
 			},
-			expected: nil,
-			expectedErr: &httpio.ErrorResponse{
+			Expected: nil,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeUnknown,
 				},
 			},
-			mocker: func(req *dto.SignUpRequest, service *mock_auth.Service) {
-				service.EXPECT().
+			Mocker: func(req *dto.SignUpRequest, d *authDeps) {
+				d.service.EXPECT().
 					SignUp(mock.Anything, dtoadapter.SignUpRequestDtoToEntity(req)).
 					Return(nil, errors.New("some error")).
 					Once()
@@ -225,41 +190,19 @@ func TestAuthHandler_SignUp(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 
 			service := mock_auth.NewService(t)
-			deps := mock_app.NewDeps(t, func(deps *app.Deps) {
-				deps.Service.AuthService = service
+			tc.Run(t, http.MethodPost, "/api/v1/auth/signup", func() *authDeps {
+				return &authDeps{
+					service: service,
+				}
+			}, func(d *authDeps) http.HandlerFunc {
+				return NewAuthHandler(mock_app.NewDeps(t, func(deps *app.Deps) {
+					deps.Service.AuthService = service
+				})).SignUp
 			})
-
-			handler := NewAuthHandler(deps)
-			if tc.mocker != nil {
-				tc.mocker(tc.req, service)
-			}
-
-			body, err := json.Marshal(tc.req)
-			require.NoError(t, err)
-
-			r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/signup", bytes.NewReader(body))
-			w := httptest.NewRecorder()
-
-			middleware.Logger(deps.Logger)(http.HandlerFunc(handler.SignUp)).ServeHTTP(w, r)
-			res := w.Result()
-
-			require.Equal(t, tc.statusCode, res.StatusCode)
-			if tc.expected != nil {
-				result := dto.TokenResponse{}
-				require.NoError(t, json.NewDecoder(res.Body).Decode(&result))
-				require.Equal(t, tc.expected, &result)
-				require.NotEmpty(t, result.AccessToken)
-				require.NotEmpty(t, result.RefreshToken)
-			} else {
-				err := httpio.ErrorResponse{}
-				require.NoError(t, json.NewDecoder(res.Body).Decode(&err))
-				require.Equal(t, tc.expectedErr.Error.Code, err.Error.Code)
-				require.NotEmpty(t, err.Error.Message)
-			}
 
 			mock.AssertExpectationsForObjects(t, service)
 		})
@@ -279,87 +222,63 @@ func TestAuthHandler_RefreshToken(t *testing.T) {
 		User:         u,
 	}
 
-	cases := []struct {
-		name        string
-		statusCode  int
-		expected    *dto.TokenResponse
-		expectedErr *httpio.ErrorResponse
-		mocker      func(mw *mock_middleware.JWTAuthentication, service *mock_auth.Service)
-	}{
+	cases := []testutil.HandlerCase[struct{}, *dto.TokenResponse, *authDeps]{
 		{
-			name:       "successful_refresh_token",
-			statusCode: http.StatusCreated,
-			expected:   dtoadapter.TokensToResponseDto(tokens),
-			mocker: func(mw *mock_middleware.JWTAuthentication, service *mock_auth.Service) {
-				mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
-				service.EXPECT().GenerateTokens(u).Return(tokens, nil).Once()
+			Name:       "successful_refresh_token",
+			StatusCode: http.StatusCreated,
+			Expected:   dtoadapter.TokensToResponseDto(tokens),
+			Mocker: func(_ struct{}, d *authDeps) {
+				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
+				d.service.EXPECT().GenerateTokens(u).Return(tokens, nil).Once()
 			},
 		},
 		{
-			name:       "user_unauthorized",
-			statusCode: http.StatusUnauthorized,
-			expectedErr: &httpio.ErrorResponse{
+			Name:       "user_unauthorized",
+			StatusCode: http.StatusUnauthorized,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeUnauthorized,
 				},
 			},
-			mocker: func(mw *mock_middleware.JWTAuthentication, service *mock_auth.Service) {
-				mw.EXPECT().GetUser(mock.Anything).Return(nil, errors.New("no user")).Once()
+			Mocker: func(_ struct{}, d *authDeps) {
+				d.mw.EXPECT().GetUser(mock.Anything).Return(nil, errors.New("no user")).Once()
 			},
 		},
 		{
-			name:       "generate_token_error",
-			statusCode: http.StatusUnauthorized,
-			expectedErr: &httpio.ErrorResponse{
+			Name:       "generate_token_error",
+			StatusCode: http.StatusUnauthorized,
+			ExpectedErr: &httpio.ErrorResponse{
 				Error: &errx.CodeError{
 					Code: errx.CodeUnauthorized,
 				},
 			},
-			mocker: func(mw *mock_middleware.JWTAuthentication, service *mock_auth.Service) {
-				mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
-				service.EXPECT().GenerateTokens(u).Return(nil, errors.New("generate token error")).Once()
+			Mocker: func(_ struct{}, d *authDeps) {
+				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
+				d.service.EXPECT().GenerateTokens(u).Return(nil, errors.New("generate token error")).Once()
 			},
 		},
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
 
 			service := mock_auth.NewService(t)
 			mw := mock_middleware.NewJWTAuthentication(t)
 
-			deps := mock_app.NewDeps(t, func(deps *app.Deps) {
-				deps.Service.AuthService = service
-				deps.JWTAuthentication = mw
+			tc.Run(t, http.MethodPost, "/api/v1/auth/refresh", func() *authDeps {
+				return &authDeps{
+					mw:      mw,
+					service: service,
+				}
+			}, func(d *authDeps) http.HandlerFunc {
+				return NewAuthHandler(mock_app.NewDeps(t, func(deps *app.Deps) {
+					deps.Service.AuthService = service
+					deps.JWTAuthentication = mw
+				})).RefreshToken
 			})
 
-			handler := NewAuthHandler(deps)
-			if tc.mocker != nil {
-				tc.mocker(mw, service)
-			}
-
-			r := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
-			w := httptest.NewRecorder()
-
-			middleware.Logger(deps.Logger)(http.HandlerFunc(handler.RefreshToken)).ServeHTTP(w, r)
-			res := w.Result()
-
-			require.Equal(t, tc.statusCode, res.StatusCode)
-			if tc.expected != nil {
-				result := dto.TokenResponse{}
-				require.NoError(t, json.NewDecoder(res.Body).Decode(&result))
-				require.Equal(t, tc.expected, &result)
-				require.NotEmpty(t, result.AccessToken)
-				require.NotEmpty(t, result.RefreshToken)
-			} else {
-				err := httpio.ErrorResponse{}
-				require.NoError(t, json.NewDecoder(res.Body).Decode(&err))
-				require.Equal(t, tc.expectedErr.Error.Code, err.Error.Code)
-				require.NotEmpty(t, err.Error.Message)
-			}
-
-			mock.AssertExpectationsForObjects(t, service, mw)
+			mock.AssertExpectationsForObjects(t, service)
 		})
 	}
 }

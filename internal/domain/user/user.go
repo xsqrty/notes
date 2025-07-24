@@ -2,10 +2,13 @@ package user
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var ErrNotFound = errors.New("user not found")
 
 // User represents a system user with account-related information.
 type User struct {

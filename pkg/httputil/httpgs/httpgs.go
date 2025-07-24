@@ -12,7 +12,7 @@ import (
 // Set is an interface for managing and gracefully shutting down multiple HTTP servers.
 type Set interface {
 	// Register adds a server and its shutdown timeout to the Set.
-	Register(name string, server *http.Server, shutdownTimeout time.Duration) Set
+	Register(name string, server *http.Server, options ...RegisterOption) Set
 	// OnMessage sets a callback to handle informational messages.
 	OnMessage(func(name, message string)) Set
 	// OnError sets a callback to handle errors from the servers.
@@ -21,17 +21,19 @@ type Set interface {
 	ListenAndServe() error
 }
 
+// RegisterOption defines a function type used to configure an item instance dynamically.
+type RegisterOption func(*item)
+
 // set is a type used to manage multiple HTTP servers with graceful shutdown capabilities.
 type set struct {
-	wg          sync.WaitGroup
-	m           sync.Mutex
-	ctx         context.Context
-	onMessage   func(key, message string)
-	onError     func(key string, err error)
-	items       []*item
-	errorsCh    chan error
-	done        chan struct{}
-	closedByErr chan struct{}
+	wg        sync.WaitGroup
+	m         sync.Mutex
+	ctx       context.Context
+	cancelCtx context.CancelFunc
+	onMessage func(key, message string)
+	onError   func(key string, err error)
+	items     []*item
+	errorsCh  chan error
 }
 
 // item represents a server instance with configurable shutdown behavior and a communication channel for state updates.
@@ -40,11 +42,22 @@ type item struct {
 	name            string
 	server          *http.Server
 	done            chan struct{}
+	priority        int
 }
+
+const (
+	// defaultShutdownTimeout specifies the default duration to wait for server shutdown before forcing termination.
+	defaultShutdownTimeout = 30 * time.Second
+	// highPriority defines the constant value representing the highest priority level.
+	highPriority = 1
+	// lowPriority defines the constant value representing the lowest priority level.
+	lowPriority = 0
+)
 
 // NewGracefulShutdown creates a `Set` instance to manage graceful server shutdowns using the provided context.
 func NewGracefulShutdown(ctx context.Context) Set {
-	return &set{ctx: ctx}
+	ctx, cancel := context.WithCancel(ctx)
+	return &set{ctx: ctx, cancelCtx: cancel}
 }
 
 // OnMessage sets a callback function to handle messages from the set.
@@ -60,10 +73,21 @@ func (s *set) OnError(errorHandler func(name string, err error)) Set {
 }
 
 // Register adds a server to the set.
-func (s *set) Register(name string, server *http.Server, shutdownTimeout time.Duration) Set {
+func (s *set) Register(name string, server *http.Server, options ...RegisterOption) Set {
 	s.m.Lock()
 	defer s.m.Unlock()
-	item := &item{name: name, server: server, shutdownTimeout: shutdownTimeout, done: make(chan struct{})}
+	item := &item{
+		name:            name,
+		server:          server,
+		shutdownTimeout: defaultShutdownTimeout,
+		done:            make(chan struct{}),
+		priority:        lowPriority,
+	}
+
+	for _, opt := range options {
+		opt(item)
+	}
+
 	s.items = append(s.items, item)
 
 	return s
@@ -74,33 +98,38 @@ func (s *set) ListenAndServe() error {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	s.done = make(chan struct{})
-	s.closedByErr = make(chan struct{})
 	s.errorsCh = make(chan error, len(s.items))
-
 	s.wg.Add(len(s.items))
+	var err error
+
+	go func() {
+		for occurred := range s.errorsCh {
+			err = errors.Join(err, occurred)
+		}
+	}()
+
 	for _, item := range s.items {
 		go s.listenAndServe(item)
 		go s.gracefulShutdown(item)
 	}
 
-	go func() {
-		fatalCount := 0
-		for range s.errorsCh {
-			fatalCount++
-			if fatalCount == len(s.items) {
-				close(s.closedByErr)
-			}
-		}
-	}()
+	s.wg.Wait()
+	return err
+}
 
-	go func() {
-		s.wg.Wait()
-		close(s.done)
-	}()
+// WithHighPriority sets the high priority of the item.
+// If the server crashes with an error, all other resources will be gracefully stopped
+func WithHighPriority() RegisterOption {
+	return func(i *item) {
+		i.priority = highPriority
+	}
+}
 
-	<-s.done
-	return nil
+// WithShutdownTimeout sets the shutdown timeout duration for an item instance.
+func WithShutdownTimeout(timeout time.Duration) RegisterOption {
+	return func(i *item) {
+		i.shutdownTimeout = timeout
+	}
 }
 
 // pushMessage invokes the onMessage callback if defined, passing the provided server name and message as parameters.
@@ -125,6 +154,10 @@ func (s *set) listenAndServe(i *item) {
 		s.pushError(i.name, fmt.Errorf("listen error: %w", err))
 		s.errorsCh <- err
 		close(i.done)
+
+		if i.priority == highPriority {
+			s.cancelCtx()
+		}
 	}
 }
 

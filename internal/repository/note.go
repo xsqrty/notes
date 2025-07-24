@@ -10,6 +10,7 @@ import (
 	"github.com/xsqrty/notes/internal/domain/note"
 	"github.com/xsqrty/notes/internal/domain/search"
 	"github.com/xsqrty/notes/internal/domain/user"
+	"github.com/xsqrty/notes/pkg/repoutil"
 	"github.com/xsqrty/op"
 	"github.com/xsqrty/op/db"
 	"github.com/xsqrty/op/orm"
@@ -53,7 +54,7 @@ func (r *noteRepo) GetByID(ctx context.Context, id uuid.UUID) (*note.Note, error
 		op.Select().From(notesTableName).Where(op.Eq("id", id)),
 	).GetOne(ctx, r.qe)
 	if err != nil {
-		return nil, fmt.Errorf("get note by id: %w", err)
+		return nil, fmt.Errorf("get note by id: %w", repoutil.RedefineNoRowsError(err, note.ErrNotFound))
 	}
 
 	return user, nil
@@ -102,11 +103,11 @@ func (r *noteRepo) SearchByUser(
 		With(ctx, r.qe)
 	if err != nil {
 		if errors.Is(err, orm.ErrFilterInvalid) {
-			return nil, fmt.Errorf("search note: invalid filter: %w", errors.Join(note.ErrNoteSearchBadRequest, err))
+			return nil, fmt.Errorf("search note: invalid filter: %w", errors.Join(note.ErrSearchBadRequest, err))
 		}
 
 		if errors.Is(err, orm.ErrDisallowedKey) {
-			return nil, fmt.Errorf("search note: disallowed key: %w", errors.Join(note.ErrNoteSearchBadRequest, err))
+			return nil, fmt.Errorf("search note: disallowed key: %w", errors.Join(note.ErrSearchBadRequest, err))
 		}
 
 		return nil, fmt.Errorf("search note by user: %w", err)

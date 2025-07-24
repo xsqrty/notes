@@ -42,7 +42,7 @@ func (s *noteService) Create(ctx context.Context, u *user.User, data *note.Creat
 	}
 
 	if !granted {
-		return nil, fmt.Errorf("create note: %w (user %s)", note.ErrNoteOperationForbiddenForUser, u.ID)
+		return nil, fmt.Errorf("create note: %w (user %s)", note.ErrOperationForbiddenForUser, u.ID)
 	}
 
 	n := &note.Note{
@@ -63,7 +63,7 @@ func (s *noteService) Create(ctx context.Context, u *user.User, data *note.Creat
 func (s *noteService) Get(ctx context.Context, u *user.User, id uuid.UUID) (*note.Note, error) {
 	curNote, err := s.noteRepo.GetByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("get note: %w (user %s, note %s)", errors.Join(note.ErrNoteNotFound, err), u.ID, id)
+		return nil, fmt.Errorf("get note: %w (user %s, note %s)", errors.Join(note.ErrNotFound, err), u.ID, id)
 	}
 
 	granted, err := s.guard.IsGranted(ctx, rbac.READ, curNote, u)
@@ -74,7 +74,7 @@ func (s *noteService) Get(ctx context.Context, u *user.User, id uuid.UUID) (*not
 	if !granted {
 		return nil, fmt.Errorf(
 			"get note: %w (user %s, note %s)",
-			note.ErrNoteOperationForbiddenForUser,
+			note.ErrOperationForbiddenForUser,
 			u.ID,
 			curNote.ID,
 		)
@@ -89,7 +89,7 @@ func (s *noteService) Update(ctx context.Context, u *user.User, data *note.Updat
 	if err != nil {
 		return nil, fmt.Errorf(
 			"update note: %w (user %s, note %s)",
-			errors.Join(note.ErrNoteNotFound, err),
+			errors.Join(note.ErrNotFound, err),
 			u.ID,
 			data.ID,
 		)
@@ -103,7 +103,7 @@ func (s *noteService) Update(ctx context.Context, u *user.User, data *note.Updat
 	if !granted {
 		return nil, fmt.Errorf(
 			"update note: %w (user %s, note %s)",
-			note.ErrNoteOperationForbiddenForUser,
+			note.ErrOperationForbiddenForUser,
 			u.ID,
 			curNote.ID,
 		)
@@ -124,7 +124,7 @@ func (s *noteService) Update(ctx context.Context, u *user.User, data *note.Updat
 func (s *noteService) Delete(ctx context.Context, u *user.User, id uuid.UUID) (*note.Note, error) {
 	curNote, err := s.noteRepo.GetByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("delete note: %w (user %s, note %s)", errors.Join(note.ErrNoteNotFound, err), u.ID, id)
+		return nil, fmt.Errorf("delete note: %w (user %s, note %s)", errors.Join(note.ErrNotFound, err), u.ID, id)
 	}
 
 	granted, err := s.guard.IsGranted(ctx, rbac.DELETE, curNote, u)
@@ -135,7 +135,7 @@ func (s *noteService) Delete(ctx context.Context, u *user.User, id uuid.UUID) (*
 	if !granted {
 		return nil, fmt.Errorf(
 			"delete note: %w (user %s, note %s)",
-			note.ErrNoteOperationForbiddenForUser,
+			note.ErrOperationForbiddenForUser,
 			u.ID,
 			curNote.ID,
 		)
@@ -160,7 +160,7 @@ func (s *noteService) Search(
 	}
 
 	if !granted {
-		return nil, fmt.Errorf("search note: %w (user %s)", note.ErrNoteOperationForbiddenForUser, u.ID)
+		return nil, fmt.Errorf("search note: %w (user %s)", note.ErrOperationForbiddenForUser, u.ID)
 	}
 
 	res, err := s.noteRepo.SearchByUser(ctx, u, req)

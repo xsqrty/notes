@@ -28,7 +28,7 @@ type noteDeps struct {
 	service *mock_note.Service
 }
 
-func TestNoteHandler_Get(t *testing.T) {
+func TestNoteHandler_Get(t *testing.T) { // nolint: dupl
 	t.Parallel()
 
 	name := gofakeit.Name()
@@ -93,7 +93,7 @@ func TestNoteHandler_Get(t *testing.T) {
 			},
 			Mocker: func(_ struct{}, d *noteDeps) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
-				d.service.EXPECT().Get(mock.Anything, u, id).Return(nil, note.ErrNoteNotFound).Once()
+				d.service.EXPECT().Get(mock.Anything, u, id).Return(nil, note.ErrNotFound).Once()
 			},
 		},
 		{
@@ -107,7 +107,7 @@ func TestNoteHandler_Get(t *testing.T) {
 			},
 			Mocker: func(_ struct{}, d *noteDeps) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
-				d.service.EXPECT().Get(mock.Anything, u, id).Return(nil, note.ErrNoteOperationForbiddenForUser).Once()
+				d.service.EXPECT().Get(mock.Anything, u, id).Return(nil, note.ErrOperationForbiddenForUser).Once()
 			},
 		},
 		{
@@ -224,7 +224,7 @@ func TestNoteHandler_Create(t *testing.T) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
 				d.service.EXPECT().
 					Create(mock.Anything, u, dtoadapter.NoteRequestDtoToCreateData(req)).
-					Return(nil, note.ErrNoteOperationForbiddenForUser).
+					Return(nil, note.ErrOperationForbiddenForUser).
 					Once()
 			},
 		},
@@ -353,7 +353,7 @@ func TestNoteHandler_Update(t *testing.T) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
 				d.service.EXPECT().
 					Update(mock.Anything, u, dtoadapter.NoteRequestDtoToUpdateData(id, req)).
-					Return(nil, note.ErrNoteNotFound).
+					Return(nil, note.ErrNotFound).
 					Once()
 			},
 		},
@@ -374,7 +374,7 @@ func TestNoteHandler_Update(t *testing.T) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
 				d.service.EXPECT().
 					Update(mock.Anything, u, dtoadapter.NoteRequestDtoToUpdateData(id, req)).
-					Return(nil, note.ErrNoteOperationForbiddenForUser).
+					Return(nil, note.ErrOperationForbiddenForUser).
 					Once()
 			},
 		},
@@ -442,11 +442,11 @@ func TestNoteHandler_Update(t *testing.T) {
 	}
 }
 
-func TestNoteHandler_Delete(t *testing.T) {
+func TestNoteHandler_Delete(t *testing.T) { // nolint: dupl
 	t.Parallel()
 
 	name := gofakeit.Name()
-	text := gofakeit.Sentence(5)
+	text := gofakeit.Sentence(6)
 
 	id := uuid.Must(uuid.NewV7())
 	n := &note.Note{
@@ -461,7 +461,7 @@ func TestNoteHandler_Delete(t *testing.T) {
 
 	cases := []testutil.HandlerCase[struct{}, *dto.NoteResponse, *noteDeps]{
 		{
-			Name:       "successful_get",
+			Name:       "successful_delete",
 			ID:         id.String(),
 			StatusCode: http.StatusOK,
 			Expected:   dtoadapter.NoteToResponseDto(n),
@@ -507,7 +507,7 @@ func TestNoteHandler_Delete(t *testing.T) {
 			},
 			Mocker: func(_ struct{}, d *noteDeps) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
-				d.service.EXPECT().Delete(mock.Anything, u, id).Return(nil, note.ErrNoteNotFound).Once()
+				d.service.EXPECT().Delete(mock.Anything, u, id).Return(nil, note.ErrNotFound).Once()
 			},
 		},
 		{
@@ -523,7 +523,7 @@ func TestNoteHandler_Delete(t *testing.T) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
 				d.service.EXPECT().
 					Delete(mock.Anything, u, id).
-					Return(nil, note.ErrNoteOperationForbiddenForUser).
+					Return(nil, note.ErrOperationForbiddenForUser).
 					Once()
 			},
 		},
@@ -638,7 +638,7 @@ func TestNoteHandler_Search(t *testing.T) {
 			},
 			Mocker: func(req any, d *noteDeps) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
-				d.service.EXPECT().Search(mock.Anything, u, req).Return(nil, note.ErrNoteSearchBadRequest).Once()
+				d.service.EXPECT().Search(mock.Anything, u, req).Return(nil, note.ErrSearchBadRequest).Once()
 			},
 		},
 		{
@@ -654,7 +654,7 @@ func TestNoteHandler_Search(t *testing.T) {
 				d.mw.EXPECT().GetUser(mock.Anything).Return(u, nil).Once()
 				d.service.EXPECT().
 					Search(mock.Anything, u, req).
-					Return(nil, note.ErrNoteOperationForbiddenForUser).
+					Return(nil, note.ErrOperationForbiddenForUser).
 					Once()
 			},
 		},

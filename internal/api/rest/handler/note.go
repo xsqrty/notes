@@ -51,7 +51,7 @@ func (h *NoteHandler) Routes() *chi.Mux {
 //	@Failure		500	{object}	httpio.ErrorResponse
 //	@Security		AccessTokenAuth
 //	@Router			/notes/{id} [get]
-func (h *NoteHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) Get(w http.ResponseWriter, r *http.Request) { // nolint: dupl
 	user, err := h.deps.JWTAuthentication.GetUser(r)
 	if err != nil {
 		middleware.Log(r).Error().Err(err).Msg("get note handler unauthorized")
@@ -68,13 +68,13 @@ func (h *NoteHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	n, err := h.deps.Service.NoteService.Get(r.Context(), user, id)
 	if err != nil {
-		if errors.Is(err, note.ErrNoteOperationForbiddenForUser) {
+		if errors.Is(err, note.ErrOperationForbiddenForUser) {
 			middleware.Log(r).Error().Err(err).Msg("get note forbidden")
 			httpio.Error(w, http.StatusForbidden, errx.New(errx.CodeForbidden, "Operation disallowed"))
 			return
 		}
 
-		if errors.Is(err, note.ErrNoteNotFound) {
+		if errors.Is(err, note.ErrNotFound) {
 			middleware.Log(r).Debug().Err(err).Msg("get note handler not found")
 			httpio.Error(w, http.StatusNotFound, errx.New(errx.CodeNotFound, "Note is not found"))
 			return
@@ -121,7 +121,7 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	n, err := h.deps.Service.NoteService.Create(r.Context(), user, dtoadapter.NoteRequestDtoToCreateData(&request))
 	if err != nil {
-		if errors.Is(err, note.ErrNoteOperationForbiddenForUser) {
+		if errors.Is(err, note.ErrOperationForbiddenForUser) {
 			middleware.Log(r).Error().Err(err).Msg("create note forbidden")
 			httpio.Error(w, http.StatusForbidden, errx.New(errx.CodeForbidden, "Operation disallowed"))
 			return
@@ -176,13 +176,13 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	n, err := h.deps.Service.NoteService.Update(r.Context(), user, dtoadapter.NoteRequestDtoToUpdateData(id, &request))
 	if err != nil {
-		if errors.Is(err, note.ErrNoteOperationForbiddenForUser) {
+		if errors.Is(err, note.ErrOperationForbiddenForUser) {
 			middleware.Log(r).Error().Err(err).Msg("update note forbidden")
 			httpio.Error(w, http.StatusForbidden, errx.New(errx.CodeForbidden, "Operation disallowed"))
 			return
 		}
 
-		if errors.Is(err, note.ErrNoteNotFound) {
+		if errors.Is(err, note.ErrNotFound) {
 			middleware.Log(r).Debug().Err(err).Msg("update note handler not found")
 			httpio.Error(w, http.StatusNotFound, errx.New(errx.CodeNotFound, "Note is not found"))
 			return
@@ -210,7 +210,7 @@ func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500	{object}	httpio.ErrorResponse
 //	@Security		AccessTokenAuth
 //	@Router			/notes/{id} [delete]
-func (h *NoteHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *NoteHandler) Delete(w http.ResponseWriter, r *http.Request) { // nolint: dupl
 	user, err := h.deps.JWTAuthentication.GetUser(r)
 	if err != nil {
 		middleware.Log(r).Error().Err(err).Msg("delete note handler unauthorized")
@@ -227,13 +227,13 @@ func (h *NoteHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	n, err := h.deps.Service.NoteService.Delete(r.Context(), user, id)
 	if err != nil {
-		if errors.Is(err, note.ErrNoteOperationForbiddenForUser) {
+		if errors.Is(err, note.ErrOperationForbiddenForUser) {
 			middleware.Log(r).Error().Err(err).Msg("delete note forbidden")
 			httpio.Error(w, http.StatusForbidden, errx.New(errx.CodeForbidden, "Operation disallowed"))
 			return
 		}
 
-		if errors.Is(err, note.ErrNoteNotFound) {
+		if errors.Is(err, note.ErrNotFound) {
 			middleware.Log(r).Debug().Err(err).Msg("delete note handler not found")
 			httpio.Error(w, http.StatusNotFound, errx.New(errx.CodeNotFound, "Note is not found"))
 			return
@@ -280,13 +280,13 @@ func (h *NoteHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.deps.Service.NoteService.Search(r.Context(), user, &request)
 	if err != nil {
-		if errors.Is(err, note.ErrNoteOperationForbiddenForUser) {
+		if errors.Is(err, note.ErrOperationForbiddenForUser) {
 			middleware.Log(r).Error().Err(err).Msg("search note forbidden")
 			httpio.Error(w, http.StatusForbidden, errx.New(errx.CodeForbidden, "Operation disallowed"))
 			return
 		}
 
-		if errors.Is(err, note.ErrNoteSearchBadRequest) {
+		if errors.Is(err, note.ErrSearchBadRequest) {
 			middleware.Log(r).Debug().Err(err).Msg("search note bad request")
 			httpio.Error(w, http.StatusBadRequest, errx.New(errx.CodeBadRequest, "Bad request"))
 			return

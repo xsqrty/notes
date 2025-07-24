@@ -77,12 +77,17 @@ func main() {
 		OnError(func(name string, err error) {
 			log.Error().Msg(fmt.Sprintf("%s: %s", name, err.Error()))
 		}).
-		Register("Rest", server, cfg.Server.ShutdownTimeout).
-		Register("Swag", swag.NewSwagServer(cfg.Swag), cfg.Swag.ShutdownTimeout).
-		Register("Prom", prometheus.NewPrometheusServer(cfg.Metrics), cfg.Metrics.ShutdownTimeout).
+		Register(
+			"Rest",
+			server,
+			httpgs.WithShutdownTimeout(cfg.Server.ShutdownTimeout),
+			httpgs.WithHighPriority(),
+		).
+		Register("Swag", swag.NewSwagServer(cfg.Swag), httpgs.WithShutdownTimeout(cfg.Swag.ShutdownTimeout)).
+		Register("Prom", prometheus.NewPrometheusServer(cfg.Metrics), httpgs.WithShutdownTimeout(cfg.Metrics.ShutdownTimeout)).
 		ListenAndServe()
 	if err != nil {
-		panic(fmt.Errorf("listener error: %w", err))
+		log.Error().Err(err).Msg("Graceful shutdown error")
 	}
 
 	log.Info().Str("worked_at", time.Since(start).String()).Msg("Application stopped")
